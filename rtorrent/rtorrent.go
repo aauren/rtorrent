@@ -95,3 +95,16 @@ func (c *Client) getStringSlice(method string, args ...string) ([]string, error)
 	err := c.xrc.Call(method, send, &v)
 	return v, err
 }
+
+// getSliceSlice retrieves a slice of slice values from the specified
+// XML-RPC method.
+func (c *Client) getSliceSlice(method string, args ...string) ([][]any, error) {
+	send := []interface{}{""}
+	for _, a := range args {
+		send = append(send, a)
+	}
+
+	var v [][]any
+	err := c.xrc.Call(method, send, &v)
+	return v, err
+}

@@ -3,6 +3,9 @@ package rtorrent
 const (
 	// downloadList is used in methods which retrieve a list of downloads.
 	downloadList = "download_list"
+
+	// downloadListMultiCall is used in methods which retrieve a list of downloads along with subsequent commands to call on each
+	downloadListMultiCall = "d.multicall2"
 )
 
 // A DownloadService is a wrapper for Client methods which operate on downloads.
@@ -53,6 +56,12 @@ func (s *DownloadService) Leeching() ([]string, error) {
 // Active retrieves a list of active downloads from rTorrent.
 func (s *DownloadService) Active() ([]string, error) {
 	return s.c.getStringSlice(downloadList, "active")
+}
+
+// Active retrieves a list of active downloads from rTorrent.
+func (s *DownloadService) ActiveWithDetails() ([][]any, error) {
+	return s.c.getSliceSlice(downloadListMultiCall,
+		"active", "d.hash=", "d.base_filename=", "d.down.rate=", "d.down.total=", "d.up.rate=", "d.up.total=")
 }
 
 // BaseFilename retrieves the base filename shown in the rTorrent UI for a
