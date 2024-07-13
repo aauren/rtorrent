@@ -5,6 +5,7 @@ const (
 	downloadList = "download_list"
 
 	// downloadListMultiCall is used in methods which retrieve a list of downloads along with subsequent commands to call on each
+	// See: https://rtorrent-docs.readthedocs.io/en/latest/cmd-ref.html#download-items-and-attributes for more info
 	downloadListMultiCall = "d.multicall2"
 )
 
