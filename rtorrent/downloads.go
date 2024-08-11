@@ -59,10 +59,10 @@ func (s *DownloadService) Active() ([]string, error) {
 	return s.c.getStringSlice(downloadList, "active")
 }
 
-// Active retrieves a list of active downloads from rTorrent.
-func (s *DownloadService) ActiveWithDetails() ([][]any, error) {
-	return s.c.getSliceSlice(downloadListMultiCall,
-		"active", "d.hash=", "d.base_filename=", "d.down.rate=", "d.down.total=", "d.up.rate=", "d.up.total=")
+// DownloadWithDetails retrieves a list of downloads from rTorrent along with additional details as specified by the commands slice.
+func (s *DownloadService) DownloadWithDetails(commands []string) ([][]any, error) {
+	newCmds := append([]string{"active"}, commands...)
+	return s.c.getSliceSlice(downloadListMultiCall, newCmds...)
 }
 
 // BaseFilename retrieves the base filename shown in the rTorrent UI for a
