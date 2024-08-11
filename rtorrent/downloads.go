@@ -65,32 +65,27 @@ func (s *DownloadService) DownloadWithDetails(commands []string) ([][]any, error
 	return s.c.getSliceSlice(downloadListMultiCall, newCmds...)
 }
 
-// BaseFilename retrieves the base filename shown in the rTorrent UI for a
-// specific download, by its info-hash.
+// BaseFilename retrieves the base filename shown in the rTorrent UI for a specific download, by its info-hash.
 func (s *DownloadService) BaseFilename(infoHash string) (string, error) {
 	return s.c.getString("d.base_filename", infoHash)
 }
 
-// DownloadRate retrieves the current download rate in bytes for a specific
-// download, by its info-hash.
+// DownloadRate retrieves the current download rate in bytes for a specific download, by its info-hash.
 func (s *DownloadService) DownloadRate(infoHash string) (int, error) {
 	return s.c.getInt("d.down.rate", infoHash)
 }
 
-// DownloadTotal retrieves the total bytes downloaded for a specific download,
-// by its info-hash.
+// DownloadTotal retrieves the total bytes downloaded for a specific download, by its info-hash.
 func (s *DownloadService) DownloadTotal(infoHash string) (int, error) {
 	return s.c.getInt("d.down.total", infoHash)
 }
 
-// UploadRate retrieves the current upload rate in bytes for a specific
-// download, by its info-hash.
+// UploadRate retrieves the current upload rate in bytes for a specific download, by its info-hash.
 func (s *DownloadService) UploadRate(infoHash string) (int, error) {
 	return s.c.getInt("d.up.rate", infoHash)
 }
 
-// UploadTotal retrieves the total bytes uploaded for a specific download, by
-// its info-hash.
+// UploadTotal retrieves the total bytes uploaded for a specific download, by its info-hash.
 func (s *DownloadService) UploadTotal(infoHash string) (int, error) {
 	return s.c.getInt("d.up.total", infoHash)
 }
