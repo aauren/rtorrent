@@ -1,7 +1,6 @@
 package rtorrent
 
 import (
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -19,7 +18,7 @@ func TestClientDownloadsAll(t *testing.T) {
 
 	downloads, err := c.Downloads.All()
 	if err != nil {
-		log.Fatalf("failed call to Client.Downloads.All: %v", err)
+		t.Fatalf("failed call to Client.Downloads.All: %v", err)
 	}
 
 	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {

@@ -7,16 +7,14 @@ import (
 	"github.com/kolo/xmlrpc"
 )
 
-// A Client is an rTorrent client.  It can be used to retrieve a
-// variety of statistics from rTorrent.
+// A Client is an rTorrent client.  It can be used to retrieve a variety of statistics from rTorrent.
 type Client struct {
 	Downloads *DownloadService
 
 	xrc *xmlrpc.Client
 }
 
-// New creates a new Client using the input XML-RPC address and an optional
-// transport.  If transport is nil, a default one will be used.
+// New creates a new Client using the input XML-RPC address and an optional transport.  If transport is nil, a default one will be used.
 func New(addr string, transport http.RoundTripper) (*Client, error) {
 	xrc, err := xmlrpc.NewClient(addr, transport)
 	if err != nil {
@@ -37,14 +35,12 @@ func (c *Client) Close() error {
 	return c.xrc.Close()
 }
 
-// DownloadTotal retrieves the total number of downloaded bytes since
-// rTorrent startup.
+// DownloadTotal retrieves the total number of downloaded bytes since rTorrent startup.
 func (c *Client) DownloadTotal() (int, error) {
 	return c.getInt("down.total", "")
 }
 
-// UploadTotal retrieves the total number of uploaded bytes since
-// rTorrent startup.
+// UploadTotal retrieves the total number of uploaded bytes since rTorrent startup.
 func (c *Client) UploadTotal() (int, error) {
 	return c.getInt("up.total", "")
 }
@@ -83,8 +79,9 @@ func (c *Client) getString(method string, arg string) (string, error) {
 	return v, err
 }
 
-// getStringSlice retrieves a slice of string values from the specified
-// XML-RPC method.
+// getStringSlice retrieves a slice of string values from the specified XML-RPC method.
+//
+//nolint:unparam // we don't care about download_list being the only method so far
 func (c *Client) getStringSlice(method string, args ...string) ([]string, error) {
 	send := []interface{}{""}
 	for _, a := range args {
@@ -96,8 +93,7 @@ func (c *Client) getStringSlice(method string, args ...string) ([]string, error)
 	return v, err
 }
 
-// getSliceSlice retrieves a slice of slice values from the specified
-// XML-RPC method.
+// getSliceSlice retrieves a slice of slice values from the specified XML-RPC method.
 func (c *Client) getSliceSlice(method string, args ...string) ([][]any, error) {
 	send := []interface{}{""}
 	for _, a := range args {

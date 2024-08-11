@@ -134,7 +134,7 @@ func testClient(t *testing.T, method string, args []string, out interface{}) (*C
 
 func writeXMLRPC(w io.Writer, out interface{}) error {
 	var xw xmlrpcResponse
-	xw.Params = make([]xmlrpcParam, 1, 1)
+	xw.Params = make([]xmlrpcParam, 1)
 
 	switch out := out.(type) {
 	case int:
