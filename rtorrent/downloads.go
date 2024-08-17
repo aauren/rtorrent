@@ -61,7 +61,7 @@ func (s *DownloadService) Active() ([]string, error) {
 
 // DownloadWithDetails retrieves a list of downloads from rTorrent along with additional details as specified by the commands slice.
 func (s *DownloadService) DownloadWithDetails(commands []string) ([][]any, error) {
-	newCmds := append([]string{"active"}, commands...)
+	newCmds := append([]string{"default"}, commands...)
 	return s.c.getSliceSlice(downloadListMultiCall, newCmds...)
 }
 
