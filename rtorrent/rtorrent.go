@@ -84,9 +84,7 @@ func (c *Client) getString(method string, arg string) (string, error) {
 //nolint:unparam // we don't care about download_list being the only method so far
 func (c *Client) getStringSlice(method string, args ...string) ([]string, error) {
 	send := []interface{}{""}
-	for _, a := range args {
-		send = append(send, a)
-	}
+	send = append(send, args)
 
 	var v []string
 	err := c.xrc.Call(method, send, &v)
@@ -96,9 +94,7 @@ func (c *Client) getStringSlice(method string, args ...string) ([]string, error)
 // getSliceSlice retrieves a slice of slice values from the specified XML-RPC method.
 func (c *Client) getSliceSlice(method string, args ...string) ([][]any, error) {
 	send := []interface{}{""}
-	for _, a := range args {
-		send = append(send, a)
-	}
+	send = append(send, args)
 
 	var v [][]any
 	err := c.xrc.Call(method, send, &v)
