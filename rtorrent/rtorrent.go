@@ -10,6 +10,7 @@ import (
 // A Client is an rTorrent client.  It can be used to retrieve a variety of statistics from rTorrent.
 type Client struct {
 	Downloads *DownloadService
+	Trackers  *TrackerService
 
 	xrc *xmlrpc.Client
 }
@@ -26,6 +27,7 @@ func New(addr string, transport http.RoundTripper) (*Client, error) {
 	}
 
 	c.Downloads = &DownloadService{c: c}
+	c.Trackers = &TrackerService{c: c}
 
 	return c, nil
 }
