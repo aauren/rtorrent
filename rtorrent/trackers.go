@@ -366,7 +366,7 @@ func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerInd
 		}
 		newCmds = append(newCmds, string(field))
 	}
-	sliceOfSlices, err := ts.c.getSliceSlice(trackerListMultiCall, newCmds...)
+	sliceOfSlices, err := ts.contextWrapGetSliceSlice(ctx, trackerListMultiCall, newCmds...)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +377,7 @@ func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerInd
 	}
 
 	if slices.Contains(fields, FieldURL) {
-		urls, err := ts.c.getSliceSlice(trackerListMultiCall, ti.String(), string(FieldURL))
+		urls, err := ts.contextWrapGetSliceSlice(ctx, trackerListMultiCall, ti.String(), string(FieldURL))
 		if err != nil {
 			return nil, err
 		}
@@ -385,6 +385,32 @@ func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerInd
 	}
 
 	return t, nil
+}
+
+func (ts *TrackerService) contextWrapGetSliceSlice(ctx context.Context, method string, args ...string) ([][]any, error) {
+	// Create a channel to receive the result
+	resultChan := make(chan struct {
+		sliceOfSlices [][]any
+		err           error
+	}, 1)
+
+	// Run the request in a separate goroutine
+	go func() {
+		sliceOfSlices, err := ts.c.getSliceSlice(method, args...)
+		resultChan <- struct {
+			sliceOfSlices [][]any
+			err           error
+		}{sliceOfSlices, err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		// Context was cancelled or timed out
+		return nil, ctx.Err()
+	case result := <-resultChan:
+		// Request completed
+		return result.sliceOfSlices, result.err
+	}
 }
 
 // TrackerFromSlice creates a new Tracker from a slice of data
