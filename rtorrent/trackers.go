@@ -1,8 +1,11 @@
 package rtorrent
 
 import (
+	"context"
 	"errors"
+	"slices"
 	"strconv"
+	"time"
 )
 
 const (
@@ -12,42 +15,386 @@ const (
 )
 
 var (
-	ErrNilTrackerIndex = errors.New("nil tracker index")
+	// Custom error definitions
+	ErrNilTrackerIndex   = errors.New("nil tracker index")
+	ErrNoField           = errors.New("no field found")
+	ErrUnknownField      = errors.New("unknown field")
+	ErrBadData           = errors.New("bad data")
+	ErrNoDataFromTracker = errors.New("no data from tracker")
+
+	// List of all possible fields that can be retrieved from a tracker
+	AllTrackerFields = []TrackerField{FieldCanScrape, FieldIsUsable, FieldIsEnabled, FieldFailedCounter, FieldActivityLast,
+		FieldActivityNext, FieldFailedLast, FieldFailedNext, FieldID, FieldIsBusy, FieldIsOpen, FiledIsExtraTracker, FieldLatestEvent,
+		FieldMinInterval, FieldNormalInterval, FieldSuccessCounter, FieldSuccessLast, FieldSuccessNext, FieldType, FieldURL}
 )
 
+const (
+	// XMLRPC Tracker Fields
+	FieldCanScrape      = TrackerField("can_scrape")
+	FieldIsUsable       = TrackerField("is_usable")
+	FieldIsEnabled      = TrackerField("is_enabled")
+	FieldFailedCounter  = TrackerField("failed_counter")
+	FieldActivityLast   = TrackerField("activity_last_time")
+	FieldActivityNext   = TrackerField("activity_time_next")
+	FieldFailedLast     = TrackerField("failed_time_last")
+	FieldFailedNext     = TrackerField("failed_time_next")
+	FieldID             = TrackerField("id")
+	FieldIsBusy         = TrackerField("is_busy")
+	FieldIsOpen         = TrackerField("is_open")
+	FiledIsExtraTracker = TrackerField("is_extra_tracker")
+	FieldLatestEvent    = TrackerField("latest_event")
+	FieldMinInterval    = TrackerField("min_interval")
+	FieldNormalInterval = TrackerField("normal_interval")
+	FieldSuccessCounter = TrackerField("success_counter")
+	FieldSuccessLast    = TrackerField("success_time_last")
+	FieldSuccessNext    = TrackerField("success_time_next")
+	FieldType           = TrackerField("type")
+	FieldURL            = TrackerField("url")
+
+	// Tracker Events
+	EventNone      = 0
+	EventCompleted = 1
+	EventStarted   = 2
+	EventStopped   = 3
+	EventScrape    = 4
+
+	// Tracker Types
+	TypeHTTP = 1
+	TypeUDP  = 2
+	TypeDHT  = 3
+)
+
+// TrackerService is used to interact with the tracker information gatherer methods in rTorrent
 type TrackerService struct {
 	c *Client
 }
 
+// TrackerIndex is used to specify which tracker to retrieve information about
 type TrackerIndex struct {
-	infoHash string
-	index    int
+	InfoHash string
+	Index    int
+}
+
+// String returns the string representation of the TrackerIndex. If index is -1, it will only return the infoHash, otherwise it will
+// return the infoHash and index joined by a colon
+func (ti *TrackerIndex) String() string {
+	if ti.Index == -1 {
+		return ti.InfoHash
+	}
+	return ti.InfoHash + ":" + strconv.Itoa(ti.Index)
+}
+
+// TrackerField is used to specify tracker related fields that can be retrieved from rTorrent
+type TrackerField string
+
+// TrackerEvent is used to specify the type of event that occurred with a tracker
+type TrackerEvent int
+
+// String returns the string representation of the TrackerEvent
+func (te TrackerEvent) String() string {
+	switch te {
+	case EventNone:
+		return "None"
+	case EventCompleted:
+		return "Completed"
+	case EventStarted:
+		return "Started"
+	case EventStopped:
+		return "Stopped"
+	case EventScrape:
+		return "Scrape"
+	default:
+		return "Unknown"
+	}
+}
+
+// TrackerType is used to specify the type of tracker
+type TrackerType int
+
+// String returns the string representation of the TrackerType
+func (tt TrackerType) String() string {
+	switch tt {
+	case TypeHTTP:
+		return "HTTP"
+	case TypeUDP:
+		return "UDP"
+	case TypeDHT:
+		return "DHT"
+	default:
+		return "Unknown"
+	}
+}
+
+// Tracker is used to represent information about a tracker in rTorrent
+type Tracker struct {
+	ti    *TrackerIndex
+	tData map[TrackerField]interface{}
+}
+
+// TrackerIndex returns the TrackerIndex for the tracker
+func (t *Tracker) TrackerIndex() *TrackerIndex {
+	return t.ti
+}
+
+// CanScrape Checks if the announce URL is scrapeable. rTorrent considers a HTTP tracker scrapeable if the announce URL contains the string
+// /announce somewhere after the rightmost / (inclusively).
+func (t *Tracker) CanScrape() (bool, error) {
+	data, ok := t.tData[FieldCanScrape]
+	if !ok {
+		return false, ErrNoField
+	}
+	return boolFromAny(data)
+}
+
+// IsUsable Checks if the tracker is usable. A tracker is considered usable if it is enabled and not marked as failed.
+func (t *Tracker) IsUsable() (bool, error) {
+	data, ok := t.tData[FieldIsUsable]
+	if !ok {
+		return false, ErrNoField
+	}
+	return boolFromAny(data)
+}
+
+// IsEnabled Checks if the tracker is enabled. A tracker is considered enabled if it is not marked as disabled.
+func (t *Tracker) IsEnabled() (bool, error) {
+	data, ok := t.tData[FieldIsEnabled]
+	if !ok {
+		return false, ErrNoField
+	}
+	return boolFromAny(data)
+}
+
+// FailedCounter Returns the number of failed requests to the tracker. Note that this value resets to 0 if a request succeeds.
+func (t *Tracker) FailedCounter() (int, error) {
+	data, ok := t.tData[FieldFailedCounter]
+	if !ok {
+		return 0, ErrNoField
+	}
+	return intFromAny(data)
+}
+
+// ActivityTimeLast Returns the last time there was an attempt to announce to this tracker, regardless of whether or not the announce
+// succeeded.
+func (t *Tracker) ActivityLastTime() (time.Time, error) {
+	data, ok := t.tData[FieldActivityLast]
+	if !ok {
+		return time.Time{}, ErrNoField
+	}
+	return timeFromAny(data)
+}
+
+// ActivityTimeNext Returns when rtorrent will attempt to announce to the tracker next. In most cases, t.activity_time_next -
+// t.activity_time_last will equal t.normal_interval.
+func (t *Tracker) ActivityTimeNext() (time.Time, error) {
+	data, ok := t.tData[FieldActivityNext]
+	if !ok {
+		return time.Time{}, ErrNoField
+	}
+	return timeFromAny(data)
+}
+
+// FailedTimeLast Returns the last time there was a failed attempt to announce to this tracker.
+func (t *Tracker) FailedTimeLast() (time.Time, error) {
+	data, ok := t.tData[FieldFailedLast]
+	if !ok {
+		return time.Time{}, ErrNoField
+	}
+	return timeFromAny(data)
+}
+
+// FailedTimeNext Returns the time at when the next request is planned to happen after a failed request. rTorrent backs off failed requests
+// exponentially, i.e. each time a request fails, it doubles the interval until it tries again.
+func (t *Tracker) FailedTimeNext() (time.Time, error) {
+	data, ok := t.tData[FieldFailedNext]
+	if !ok {
+		return time.Time{}, ErrNoField
+	}
+	return timeFromAny(data)
+}
+
+// ID If a previous HTTP tracker response contains the tracker id key, t.id will contain that value, and it will be added as a parameter to
+// any subsequent requests to that same tracker.
+func (t *Tracker) ID() (string, error) {
+	data, ok := t.tData[FieldID]
+	if !ok {
+		return "", ErrNoField
+	}
+	return stringFromAny(data)
+}
+
+// IsBusy Returns true if the request is in the middle of processing, and false otherwise (this is identical to IsOpen())
+func (t *Tracker) IsBusy() (bool, error) {
+	data, ok := t.tData[FieldIsBusy]
+	if !ok {
+		return false, ErrNoField
+	}
+	return boolFromAny(data)
+}
+
+// IsOpen Returns true if the request is in the middle of processing, and false otherwise (this is identical to IsBusy())
+func (t *Tracker) IsOpen() (bool, error) {
+	data, ok := t.tData[FieldIsOpen]
+	if !ok {
+		return false, ErrNoField
+	}
+	return boolFromAny(data)
+}
+
+// IsExtraTracker Returns true if the tracker was added via d.tracker.insert, rather than existing in the original metafile.
+func (t *Tracker) IsExtraTracker() (bool, error) {
+	data, ok := t.tData[FiledIsExtraTracker]
+	if !ok {
+		return false, ErrNoField
+	}
+	return boolFromAny(data)
+}
+
+// LatestEvent Returns the latest event that occurred with the tracker. The possible values are:
+// 0: None
+// 1: Completed
+// 2: Started
+// 3: Stopped
+// 4: Scrape (this isn't an actual event key the BitTorrent spec defines, instead this indicates that the tracker is currently processing
+//
+//	a scrape request)
+func (t *Tracker) LatestEvent() (TrackerEvent, error) {
+	data, ok := t.tData[FieldLatestEvent]
+	if !ok {
+		return 0, ErrNoField
+	}
+	eventInt, err := intFromAny(data)
+	if err != nil {
+		return 0, err
+	}
+	return TrackerEvent(eventInt), nil
+}
+
+// MinInterval Returns the values for the minimum announce intervals as returned from the tracker request.
+func (t *Tracker) MinInterval() (int, error) {
+	data, ok := t.tData[FieldMinInterval]
+	if !ok {
+		return 0, ErrNoField
+	}
+	return intFromAny(data)
+}
+
+// NormalInterval Returns the values for the normal announce intervals as returned from the tracker request.
+func (t *Tracker) NormalInterval() (int, error) {
+	data, ok := t.tData[FieldNormalInterval]
+	if !ok {
+		return 0, ErrNoField
+	}
+	return intFromAny(data)
+}
+
+// SuccessCounter Returns the number of successful requests to the tracker.
+func (t *Tracker) SuccessCounter() (int, error) {
+	data, ok := t.tData[FieldSuccessCounter]
+	if !ok {
+		return 0, ErrNoField
+	}
+	return intFromAny(data)
+}
+
+// SuccessTimeLast Returns the last time there was a successful attempt to announce to this tracker.
+func (t *Tracker) SuccessTimeLast() (time.Time, error) {
+	data, ok := t.tData[FieldSuccessLast]
+	if !ok {
+		return time.Time{}, ErrNoField
+	}
+	return timeFromAny(data)
+}
+
+// SuccessTimeNext Returns the time at when the next request is planned to happen after a successful request.
+func (t *Tracker) SuccessTimeNext() (time.Time, error) {
+	data, ok := t.tData[FieldSuccessNext]
+	if !ok {
+		return time.Time{}, ErrNoField
+	}
+	return timeFromAny(data)
+}
+
+// Type Returns the type of the tracker. The possible values are:
+// 1: HTTP
+// 2: UDP
+// 3: DHT
+func (t *Tracker) Type() (TrackerType, error) {
+	data, ok := t.tData[FieldType]
+	if !ok {
+		return 0, ErrNoField
+	}
+	typeInt, err := intFromAny(data)
+	if err != nil {
+		return 0, err
+	}
+	return TrackerType(typeInt), nil
+}
+
+func (t *Tracker) URLs() ([]string, error) {
+	data, ok := t.tData[FieldURL]
+	if !ok {
+		return nil, ErrNoField
+	}
+	return stringSliceFromAny(data)
 }
 
 // NewTrackerNoIndex creates a new trackerIndex with no index specification, meaning that all trackers for the given infoHash will be
 // executed upon
 func NewTrackerNoIndex(infoHash string) *TrackerIndex {
-	return &TrackerIndex{infoHash: infoHash, index: -1}
+	return &TrackerIndex{InfoHash: infoHash, Index: -1}
 }
 
 // NewTrackerWithIndex creates a new trackerIndex with an index specification, meaning that only the tracker at the given index for the
 // given infoHash will be executed upon
 func NewTrackerWithIndex(infoHash string, index int) *TrackerIndex {
-	return &TrackerIndex{infoHash: infoHash, index: index}
-}
-
-func (ti *TrackerIndex) String() string {
-	if ti.index == -1 {
-		return ti.infoHash
-	}
-	return ti.infoHash + ":" + strconv.Itoa(ti.index)
+	return &TrackerIndex{InfoHash: infoHash, Index: index}
 }
 
 // TrackerWithDetails retrieves a list of active downloads from rTorrent.
-func (ts *TrackerService) TrackerWithDetails(ti *TrackerIndex, commands []string) ([][]any, error) {
+func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerIndex, fields []TrackerField) (*Tracker, error) {
 	if ti == nil {
 		return nil, ErrNilTrackerIndex
 	}
-	newCmds := append([]string{ti.String()}, commands...)
-	return ts.c.getSliceSlice(trackerListMultiCall, newCmds...)
+	newCmds := []string{ti.String()}
+	for _, field := range fields {
+		if !slices.Contains(AllTrackerFields, field) {
+			return nil, ErrUnknownField
+		}
+		if field == FieldURL {
+			// We process URLs as a separate request as we can get multiple of these for a single call
+			continue
+		}
+		newCmds = append(newCmds, string(field))
+	}
+	sliceOfSlices, err := ts.c.getSliceSlice(trackerListMultiCall, newCmds...)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := TrackerFromSlice(ti, fields, sliceOfSlices)
+	if err != nil {
+		return nil, err
+	}
+
+	if slices.Contains(fields, FieldURL) {
+		urls, err := ts.c.getSliceSlice(trackerListMultiCall, ti.String(), string(FieldURL))
+		if err != nil {
+			return nil, err
+		}
+		t.tData[FieldURL] = urls[0]
+	}
+
+	return t, nil
+}
+
+// TrackerFromSlice creates a new Tracker from a slice of data
+func TrackerFromSlice(ti *TrackerIndex, fields []TrackerField, data [][]any) (*Tracker, error) {
+	if len(data) == 0 {
+		return nil, ErrNoDataFromTracker
+	}
+	tData := make(map[TrackerField]interface{})
+	for i, field := range fields {
+		tData[field] = data[i]
+	}
+	return &Tracker{ti: ti, tData: tData}, nil
 }
