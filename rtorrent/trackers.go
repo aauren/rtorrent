@@ -351,14 +351,20 @@ func NewTrackerWithIndex(infoHash string, index int) *TrackerIndex {
 }
 
 // TrackerWithDetails retrieves a list of active downloads from rTorrent.
+//
+// If the TrackerIndexed passed is nil, then ErrNilTrackerIndex will be returned. This error is special and will result in a nil Tracker
+//
+// All other errors will are the result of a request to rtorrent and will Tracker will be returned with any data fields that were able to
+// be collected along with an intact version of the TrackerIndex set inside the Tracker.
 func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerIndex, fields []TrackerField) (*Tracker, error) {
 	if ti == nil {
 		return nil, ErrNilTrackerIndex
 	}
+	t := &Tracker{ti: ti, tData: make(map[TrackerField]interface{})}
 	newCmds := []string{ti.String()}
 	for _, field := range fields {
 		if !slices.Contains(AllTrackerFields, field) {
-			return nil, ErrUnknownField
+			return t, ErrUnknownField
 		}
 		if field == FieldURL {
 			// We process URLs as a separate request as we can get multiple of these for a single call
@@ -368,18 +374,19 @@ func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerInd
 	}
 	sliceOfSlices, err := ts.contextWrapGetSliceSlice(ctx, trackerListMultiCall, newCmds...)
 	if err != nil {
-		return nil, err
+		return t, err
 	}
 
-	t, err := TrackerFromSlice(ti, fields, sliceOfSlices)
+	tData, err := TrackerDataFromSlice(fields, sliceOfSlices)
 	if err != nil {
-		return nil, err
+		return t, err
 	}
+	t.tData = tData
 
 	if slices.Contains(fields, FieldURL) {
 		urls, err := ts.contextWrapGetSliceSlice(ctx, trackerListMultiCall, ti.String(), string(FieldURL))
 		if err != nil {
-			return nil, err
+			return t, err
 		}
 		t.tData[FieldURL] = urls[0]
 	}
@@ -414,7 +421,7 @@ func (ts *TrackerService) contextWrapGetSliceSlice(ctx context.Context, method s
 }
 
 // TrackerFromSlice creates a new Tracker from a slice of data
-func TrackerFromSlice(ti *TrackerIndex, fields []TrackerField, data [][]any) (*Tracker, error) {
+func TrackerDataFromSlice(fields []TrackerField, data [][]any) (map[TrackerField]interface{}, error) {
 	if len(data) == 0 {
 		return nil, ErrNoDataFromTracker
 	}
@@ -422,5 +429,5 @@ func TrackerFromSlice(ti *TrackerIndex, fields []TrackerField, data [][]any) (*T
 	for i, field := range fields {
 		tData[field] = data[i]
 	}
-	return &Tracker{ti: ti, tData: tData}, nil
+	return tData, nil
 }
