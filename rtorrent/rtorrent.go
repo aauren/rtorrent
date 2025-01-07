@@ -27,7 +27,7 @@ func New(addr string, transport http.RoundTripper) (*Client, error) {
 	}
 
 	c.Downloads = &DownloadService{c: c}
-	c.Trackers = &TrackerService{c: c}
+	c.Trackers = &TrackerService{C: c}
 
 	return c, nil
 }
