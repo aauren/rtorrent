@@ -66,7 +66,7 @@ const (
 
 // TrackerService is used to interact with the tracker information gatherer methods in rTorrent
 type TrackerService struct {
-	c *Client
+	C *Client
 }
 
 // TrackerIndex is used to specify which tracker to retrieve information about
@@ -403,7 +403,7 @@ func (ts *TrackerService) contextWrapGetSliceSlice(ctx context.Context, method s
 
 	// Run the request in a separate goroutine
 	go func() {
-		sliceOfSlices, err := ts.c.getSliceSlice(method, args...)
+		sliceOfSlices, err := ts.C.getSliceSlice(method, args...)
 		resultChan <- struct {
 			sliceOfSlices [][]any
 			err           error
