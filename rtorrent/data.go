@@ -68,12 +68,3 @@ func stringFromAny(data interface{}) (string, error) {
 		return "", ErrBadData
 	}
 }
-
-func stringSliceFromAny(data interface{}) ([]string, error) {
-	switch v := data.(type) {
-	case []string:
-		return v, nil
-	default:
-		return nil, ErrBadData
-	}
-}

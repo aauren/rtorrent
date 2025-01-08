@@ -106,3 +106,14 @@ func (c *Client) getSliceSlice(method string, args ...string) ([][]any, error) {
 	err := c.xrc.Call(method, send, &v)
 	return v, err
 }
+
+func (c *Client) getSliceSliceByHash(method string, args ...string) ([][]any, error) {
+	send := []interface{}{args[0], ""}
+	for _, a := range args[1:] {
+		send = append(send, a)
+	}
+
+	var v [][]any
+	err := c.xrc.Call(method, send, &v)
+	return v, err
+}
