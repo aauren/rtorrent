@@ -11,7 +11,7 @@ import (
 const (
 	// trackerListMultiCall is used in methods which retrieve a list of trackers along with subsequent commands to call on each
 	// See: https://rtorrent-docs.readthedocs.io/en/latest/cmd-ref.html#download-items-and-attributes for more info
-	trackerListMultiCall = "t.muticall"
+	trackerListMultiCall = "t.multicall"
 )
 
 var (
