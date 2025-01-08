@@ -15,8 +15,9 @@ func TestClientDownloadsAll(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{""}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.All()
+	downloads, err := ds.All()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.All: %v", err)
 	}
@@ -34,8 +35,9 @@ func TestClientDownloadsStarted(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"started"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Started()
+	downloads, err := ds.Started()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Started: %v", err)
 	}
@@ -53,8 +55,9 @@ func TestClientDownloadsStopped(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"stopped"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Stopped()
+	downloads, err := ds.Stopped()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Stopped: %v", err)
 	}
@@ -72,8 +75,9 @@ func TestClientDownloadsComplete(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"complete"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Complete()
+	downloads, err := ds.Complete()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Complete: %v", err)
 	}
@@ -91,8 +95,9 @@ func TestClientDownloadsIncomplete(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"incomplete"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Incomplete()
+	downloads, err := ds.Incomplete()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Incomplete: %v", err)
 	}
@@ -110,8 +115,9 @@ func TestClientDownloadsHashing(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"hashing"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Hashing()
+	downloads, err := ds.Hashing()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Hashing: %v", err)
 	}
@@ -129,8 +135,9 @@ func TestClientDownloadsSeeding(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"seeding"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Seeding()
+	downloads, err := ds.Seeding()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Seeding: %v", err)
 	}
@@ -148,8 +155,9 @@ func TestClientDownloadsLeeching(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"leeching"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Leeching()
+	downloads, err := ds.Leeching()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Leeching: %v", err)
 	}
@@ -167,8 +175,9 @@ func TestClientDownloadsActive(t *testing.T) {
 
 	c, done := testClient(t, downloadList, []string{"active"}, wantDownloads)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	downloads, err := c.Downloads.Active()
+	downloads, err := ds.Active()
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.Active: %v", err)
 	}
@@ -185,8 +194,9 @@ func TestClientDownloadsBaseFilename(t *testing.T) {
 
 	c, done := testClient(t, "d.base_filename", []string{wantHash}, wantName)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	name, err := c.Downloads.BaseFilename(wantHash)
+	name, err := ds.BaseFilename(wantHash)
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.BaseFilename: %v", err)
 	}
@@ -203,8 +213,9 @@ func TestClientDownloadsDownloadRate(t *testing.T) {
 
 	c, done := testClient(t, "d.down.rate", []string{wantHash}, wantRate)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	rate, err := c.Downloads.DownloadRate(wantHash)
+	rate, err := ds.DownloadRate(wantHash)
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.DownloadRate: %v", err)
 	}
@@ -221,8 +232,9 @@ func TestClientDownloadsDownloadTotal(t *testing.T) {
 
 	c, done := testClient(t, "d.down.total", []string{wantHash}, wantTotal)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	total, err := c.Downloads.DownloadTotal(wantHash)
+	total, err := ds.DownloadTotal(wantHash)
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.DownloadTotal: %v", err)
 	}
@@ -239,8 +251,9 @@ func TestClientDownloadsUploadRate(t *testing.T) {
 
 	c, done := testClient(t, "d.up.rate", []string{wantHash}, wantRate)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	rate, err := c.Downloads.UploadRate(wantHash)
+	rate, err := ds.UploadRate(wantHash)
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.UploadRate: %v", err)
 	}
@@ -257,8 +270,9 @@ func TestClientDownloadsUploadTotal(t *testing.T) {
 
 	c, done := testClient(t, "d.up.total", []string{wantHash}, wantTotal)
 	defer done()
+	ds := &DownloadService{C: c}
 
-	total, err := c.Downloads.UploadTotal(wantHash)
+	total, err := ds.UploadTotal(wantHash)
 	if err != nil {
 		t.Fatalf("failed call to Client.Downloads.UploadTotal: %v", err)
 	}
