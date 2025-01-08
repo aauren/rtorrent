@@ -1,3 +1,4 @@
+.DEFAULT_GOAL := all
 BUILD_IN_DOCKER?=true
 IS_ROOT=$(filter 0,$(shell id -u))
 IN_DOCKER_GROUP=$(filter docker,$(shell groups))
@@ -7,7 +8,7 @@ GO_CACHE?=$(shell go env GOCACHE)
 DOCKER_LINT_IMAGE?=golangci/golangci-lint:v1.63.4
 DOCKER_BUILD_IMAGE?=golang:1.23.4-alpine3.21
 
-.PHONY: test lint genmoqs instdeps gofmt gofmt-fix
+.PHONY: all test lint genmoqs instdeps gofmt gofmt-fix build
 
 gofmt:
 	gofmt -l -s $(shell find . -not \( \( -wholename '*/vendor/*' \) -prune \) -name '*.go')
@@ -50,3 +51,17 @@ ifeq "$(BUILD_IN_DOCKER)" "true"
 else
 	go test -v -timeout 30s github.com/aauren/rtorrent/rtorrent/...
 endif
+
+build:
+ifeq "$(BUILD_IN_DOCKER)" "true"
+	$(DOCKER) run -v $(PWD):/go/src/github.com/aauren/rtorrent \
+		-v $(GO_CACHE):/root/.cache/go-build \
+		-v $(GO_MOD_CACHE):/go/pkg/mod \
+		-w /go/src/github.com/aauren/rtorrent $(DOCKER_BUILD_IMAGE) \
+		sh -c \
+		'CGO_ENABLED=0 go build -v github.com/aauren/rtorrent/rtorrent/...'
+else
+	go build -v github.com/aauren/rtorrent/rtorrent/...
+endif
+
+all: lint test build
