@@ -1,4 +1,6 @@
 BUILD_IN_DOCKER?=true
+IS_ROOT=$(filter 0,$(shell id -u))
+IN_DOCKER_GROUP=$(filter docker,$(shell groups))
 DOCKER=$(if $(or $(IN_DOCKER_GROUP),$(IS_ROOT),$(OSX)),docker,sudo docker)
 GO_MOD_CACHE?=$(shell go env GOMODCACHE)
 GO_CACHE?=$(shell go env GOCACHE)
