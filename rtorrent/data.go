@@ -51,7 +51,7 @@ func timeFromAny(data interface{}) (time.Time, error) {
 		return time.Unix(int64(v), 0), nil
 	case string:
 		timeInt, err := strconv.ParseInt(v, 10, 64)
-		if err == nil {
+		if err != nil {
 			return time.Time{}, ErrBadData
 		}
 		return time.Unix(timeInt, 0), nil
