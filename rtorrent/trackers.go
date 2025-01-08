@@ -3,8 +3,10 @@ package rtorrent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,6 +23,7 @@ var (
 	ErrUnknownField      = errors.New("unknown field")
 	ErrBadData           = errors.New("bad data")
 	ErrNoDataFromTracker = errors.New("no data from tracker")
+	ErrMultipleTrackers  = errors.New("multiple trackers returned")
 
 	// List of all possible fields that can be retrieved from a tracker
 	AllTrackerFields = []TrackerField{FieldCanScrape, FieldIsUsable, FieldIsEnabled, FieldFailedCounter, FieldActivityLast,
@@ -34,7 +37,7 @@ const (
 	FieldIsUsable       = TrackerField("is_usable")
 	FieldIsEnabled      = TrackerField("is_enabled")
 	FieldFailedCounter  = TrackerField("failed_counter")
-	FieldActivityLast   = TrackerField("activity_last_time")
+	FieldActivityLast   = TrackerField("activity_time_last")
 	FieldActivityNext   = TrackerField("activity_time_next")
 	FieldFailedLast     = TrackerField("failed_time_last")
 	FieldFailedNext     = TrackerField("failed_time_next")
@@ -87,6 +90,14 @@ func (ti *TrackerIndex) String() string {
 // TrackerField is used to specify tracker related fields that can be retrieved from rTorrent
 type TrackerField string
 
+func (tf TrackerField) AsXMLRPCArgument() string {
+	return "t." + string(tf) + "="
+}
+
+func (tf TrackerField) String() string {
+	return string(tf)
+}
+
 // TrackerEvent is used to specify the type of event that occurred with a tracker
 type TrackerEvent int
 
@@ -129,6 +140,103 @@ func (tt TrackerType) String() string {
 type Tracker struct {
 	ti    *TrackerIndex
 	tData map[TrackerField]interface{}
+}
+
+func (t *Tracker) CloneWithTrackerIndex(ti *TrackerIndex) *Tracker {
+	return &Tracker{ti: ti, tData: t.tData}
+}
+
+func (t *Tracker) GetFieldValueAsString(f TrackerField) string {
+	var tmpBool bool
+	var tmpInt int
+	var tmpTime time.Time
+	var tmpEvent TrackerEvent
+	var tmpType TrackerType
+	var str string
+	var err error
+	switch f {
+	case FieldCanScrape:
+		tmpBool, err = t.CanScrape()
+		str = strconv.FormatBool(tmpBool)
+	case FieldIsUsable:
+		tmpBool, err = t.IsUsable()
+		str = strconv.FormatBool(tmpBool)
+	case FieldIsEnabled:
+		tmpBool, err = t.IsEnabled()
+		str = strconv.FormatBool(tmpBool)
+	case FieldFailedCounter:
+		tmpInt, err = t.FailedCounter()
+		str = strconv.Itoa(tmpInt)
+	case FieldActivityLast:
+		tmpTime, err = t.ActivityLastTime()
+		str = tmpTime.String()
+	case FieldActivityNext:
+		tmpTime, err = t.ActivityTimeNext()
+		str = tmpTime.String()
+	case FieldFailedLast:
+		tmpTime, err = t.FailedTimeLast()
+		str = tmpTime.String()
+	case FieldFailedNext:
+		tmpTime, err = t.FailedTimeNext()
+		str = tmpTime.String()
+	case FieldID:
+		str, err = t.ID()
+	case FieldIsBusy:
+		tmpBool, err = t.IsBusy()
+		str = strconv.FormatBool(tmpBool)
+	case FieldIsOpen:
+		tmpBool, err = t.IsOpen()
+		str = strconv.FormatBool(tmpBool)
+	case FiledIsExtraTracker:
+		tmpBool, err = t.IsExtraTracker()
+		str = strconv.FormatBool(tmpBool)
+	case FieldLatestEvent:
+		tmpEvent, err = t.LatestEvent()
+		str = tmpEvent.String()
+	case FieldMinInterval:
+		tmpInt, err = t.MinInterval()
+		str = strconv.Itoa(tmpInt)
+	case FieldNormalInterval:
+		tmpInt, err = t.NormalInterval()
+		str = strconv.Itoa(tmpInt)
+	case FieldSuccessCounter:
+		tmpInt, err = t.SuccessCounter()
+		str = strconv.Itoa(tmpInt)
+	case FieldSuccessLast:
+		tmpTime, err = t.SuccessTimeLast()
+		str = tmpTime.String()
+	case FieldSuccessNext:
+		tmpTime, err = t.SuccessTimeNext()
+		str = tmpTime.String()
+	case FieldType:
+		tmpType, err = t.Type()
+		str = tmpType.String()
+	case FieldURL:
+		str, err = t.URL()
+	default:
+		return "<ne>"
+	}
+
+	if err != nil {
+		return "<na>"
+	}
+	return str
+}
+
+func (t *Tracker) String() string {
+	var sb strings.Builder
+	for k := range t.tData {
+		sb.WriteString(k.String())
+		sb.WriteString(": ")
+		sb.WriteString(t.GetFieldValueAsString(k))
+		sb.WriteString(", ")
+	}
+	s := sb.String()
+	if len(s) > 2 {
+		s = s[:len(s)-2]
+	}
+
+	return fmt.Sprintf("Tracker: TrackerIndex: <%s>, data: <%s>", t.ti, s)
 }
 
 // TrackerIndex returns the TrackerIndex for the tracker
@@ -330,12 +438,12 @@ func (t *Tracker) Type() (TrackerType, error) {
 	return TrackerType(typeInt), nil
 }
 
-func (t *Tracker) URLs() ([]string, error) {
+func (t *Tracker) URL() (string, error) {
 	data, ok := t.tData[FieldURL]
 	if !ok {
-		return nil, ErrNoField
+		return "", ErrNoField
 	}
-	return stringSliceFromAny(data)
+	return stringFromAny(data)
 }
 
 // NewTrackerNoIndex creates a new trackerIndex with no index specification, meaning that all trackers for the given infoHash will be
@@ -356,45 +464,41 @@ func NewTrackerWithIndex(infoHash string, index int) *TrackerIndex {
 //
 // All other errors will are the result of a request to rtorrent and will Tracker will be returned with any data fields that were able to
 // be collected along with an intact version of the TrackerIndex set inside the Tracker.
-func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerIndex, fields []TrackerField) (*Tracker, error) {
+func (ts *TrackerService) TrackerWithDetails(ctx context.Context, ti *TrackerIndex, fields []TrackerField) ([]*Tracker, error) {
 	if ti == nil {
 		return nil, ErrNilTrackerIndex
 	}
-	t := &Tracker{ti: ti, tData: make(map[TrackerField]interface{})}
+	t := Tracker{ti: ti, tData: make(map[TrackerField]interface{})}
+	tSlice := []*Tracker{&t}
 	newCmds := []string{ti.String()}
 	for _, field := range fields {
 		if !slices.Contains(AllTrackerFields, field) {
-			return t, ErrUnknownField
+			return tSlice, ErrUnknownField
 		}
-		if field == FieldURL {
-			// We process URLs as a separate request as we can get multiple of these for a single call
-			continue
-		}
-		newCmds = append(newCmds, string(field))
+		newCmds = append(newCmds, field.AsXMLRPCArgument())
 	}
-	sliceOfSlices, err := ts.contextWrapGetSliceSlice(ctx, trackerListMultiCall, newCmds...)
+	sliceOfSlices, err := ts.contextWrapGetSliceSliceByHash(ctx, trackerListMultiCall, newCmds...)
 	if err != nil {
-		return t, err
+		return tSlice, err
 	}
 
-	tData, err := TrackerDataFromSlice(fields, sliceOfSlices)
-	if err != nil {
-		return t, err
-	}
-	t.tData = tData
-
-	if slices.Contains(fields, FieldURL) {
-		urls, err := ts.contextWrapGetSliceSlice(ctx, trackerListMultiCall, ti.String(), string(FieldURL))
+	tSlice = make([]*Tracker, len(sliceOfSlices))
+	for i, slice := range sliceOfSlices {
+		if len(sliceOfSlices) > 1 {
+			tSlice[i] = &Tracker{ti: NewTrackerWithIndex(ti.InfoHash, i), tData: make(map[TrackerField]interface{})}
+		} else {
+			tSlice[i] = &Tracker{ti: ti, tData: make(map[TrackerField]interface{})}
+		}
+		tSlice[i].tData, err = TrackerDataFromSlice(fields, slice)
 		if err != nil {
-			return t, err
+			return tSlice, err
 		}
-		t.tData[FieldURL] = urls[0]
 	}
 
-	return t, nil
+	return tSlice, nil
 }
 
-func (ts *TrackerService) contextWrapGetSliceSlice(ctx context.Context, method string, args ...string) ([][]any, error) {
+func (ts *TrackerService) contextWrapGetSliceSliceByHash(ctx context.Context, method string, args ...string) ([][]any, error) {
 	// Create a channel to receive the result
 	resultChan := make(chan struct {
 		sliceOfSlices [][]any
@@ -403,7 +507,7 @@ func (ts *TrackerService) contextWrapGetSliceSlice(ctx context.Context, method s
 
 	// Run the request in a separate goroutine
 	go func() {
-		sliceOfSlices, err := ts.C.getSliceSlice(method, args...)
+		sliceOfSlices, err := ts.C.getSliceSliceByHash(method, args...)
 		resultChan <- struct {
 			sliceOfSlices [][]any
 			err           error
@@ -421,7 +525,7 @@ func (ts *TrackerService) contextWrapGetSliceSlice(ctx context.Context, method s
 }
 
 // TrackerFromSlice creates a new Tracker from a slice of data
-func TrackerDataFromSlice(fields []TrackerField, data [][]any) (map[TrackerField]interface{}, error) {
+func TrackerDataFromSlice(fields []TrackerField, data []any) (map[TrackerField]interface{}, error) {
 	if len(data) == 0 {
 		return nil, ErrNoDataFromTracker
 	}
