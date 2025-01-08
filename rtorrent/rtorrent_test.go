@@ -78,7 +78,7 @@ func TestClientUploadRate(t *testing.T) {
 	}
 }
 
-func testClient(t *testing.T, method string, args []string, out interface{}) (*Client, func()) {
+func testClient(t *testing.T, method string, args []string, out interface{}) (Client, func()) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var xr xmlrpcRequest
 		if err := xml.NewDecoder(r.Body).Decode(&xr); err != nil {

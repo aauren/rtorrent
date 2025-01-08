@@ -69,7 +69,7 @@ const (
 
 // TrackerService is used to interact with the tracker information gatherer methods in rTorrent
 type TrackerService struct {
-	C *Client
+	C Client
 }
 
 // TrackerIndex is used to specify which tracker to retrieve information about
