@@ -1,6 +1,6 @@
 module github.com/aauren/rtorrent
 
-go 1.23
+go 1.24
 
 require (
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
@@ -10,6 +10,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.uber.org/mock v0.5.0
+	go.uber.org/mock v0.5.2
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
