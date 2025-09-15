@@ -5,8 +5,8 @@ IN_DOCKER_GROUP=$(filter docker,$(shell groups))
 DOCKER=$(if $(or $(IN_DOCKER_GROUP),$(IS_ROOT),$(OSX)),docker,sudo docker)
 GO_MOD_CACHE?=$(shell go env GOMODCACHE)
 GO_CACHE?=$(shell go env GOCACHE)
-DOCKER_LINT_IMAGE?=golangci/golangci-lint:v2.1.6
-DOCKER_BUILD_IMAGE?=golang:1.24.3-alpine3.21
+DOCKER_LINT_IMAGE?=golangci/golangci-lint:v2.4.0
+DOCKER_BUILD_IMAGE?=golang:1.25.1-alpine3.22
 
 .PHONY: all test lint genmoqs instdeps gofmt gofmt-fix build
 
