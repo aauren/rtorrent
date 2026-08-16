@@ -14,6 +14,9 @@ const (
 	// trackerListMultiCall is used in methods which retrieve a list of trackers along with subsequent commands to call on each
 	// See: https://rtorrent-docs.readthedocs.io/en/latest/cmd-ref.html#download-items-and-attributes for more info
 	trackerListMultiCall = "t.multicall"
+
+	// unknownStr is returned by TrackerEvent.String and TrackerType.String for values with no known name
+	unknownStr = "Unknown"
 )
 
 var (
@@ -115,7 +118,7 @@ func (te TrackerEvent) String() string {
 	case EventScrape:
 		return "Scrape"
 	default:
-		return "Unknown"
+		return unknownStr
 	}
 }
 
@@ -132,7 +135,7 @@ func (tt TrackerType) String() string {
 	case TypeDHT:
 		return "DHT"
 	default:
-		return "Unknown"
+		return unknownStr
 	}
 }
 

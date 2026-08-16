@@ -8,6 +8,11 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+const (
+	testID  = "test_id"
+	testURL = "test_url"
+)
+
 func TestTrackerIndex_String(t *testing.T) {
 	ti := &TrackerIndex{InfoHash: "12345", Index: 1}
 	assert.Equal(t, "12345:1", ti.String())
@@ -31,7 +36,7 @@ func TestTrackerEvent_String(t *testing.T) {
 		{EventStarted, "Started"},
 		{EventStopped, "Stopped"},
 		{EventScrape, "Scrape"},
-		{TrackerEvent(999), "Unknown"}, // Test for an unknown event
+		{TrackerEvent(999), unknownStr}, // Test for an unknown event
 	}
 
 	for _, tt := range tests {
@@ -49,7 +54,7 @@ func TestTrackerType_String(t *testing.T) {
 		{TypeHTTP, "HTTP"},
 		{TypeUDP, "UDP"},
 		{TypeDHT, "DHT"},
-		{TrackerType(999), "Unknown"}, // Test for an unknown type
+		{TrackerType(999), unknownStr}, // Test for an unknown type
 	}
 
 	for _, tt := range tests {
@@ -71,9 +76,9 @@ func TestTracker_CloneWithTrackerIndex(t *testing.T) {
 
 func TestTracker_GetFieldValueAsString(t *testing.T) {
 	tracker := &Tracker{tData: map[TrackerField]interface{}{
-		FieldID: "test_id",
+		FieldID: testID,
 	}}
-	assert.Equal(t, "test_id", tracker.GetFieldValueAsString(FieldID))
+	assert.Equal(t, testID, tracker.GetFieldValueAsString(FieldID))
 }
 
 func TestNewTrackerNoIndex(t *testing.T) {
@@ -95,12 +100,12 @@ func TestTrackerService_TrackerWithDetails(t *testing.T) {
 		fields := []TrackerField{FieldID, FieldURL}
 		xmlRPCFields := []string{ti.String(), FieldID.AsXMLRPCArgument(), FieldURL.AsXMLRPCArgument()}
 
-		mockClient.EXPECT().getSliceSliceByHash("t.multicall", xmlRPCFields).Return([][]interface{}{{"test_id", "test_url"}}, nil)
+		mockClient.EXPECT().getSliceSliceByHash("t.multicall", xmlRPCFields).Return([][]interface{}{{testID, testURL}}, nil)
 
 		tracker, err := ts.TrackerWithDetails(context.Background(), ti, fields)
 		assert.NoError(t, err)
-		assert.Equal(t, "test_id", tracker[0].tData[FieldID])
-		assert.Equal(t, "test_url", tracker[0].tData[FieldURL])
+		assert.Equal(t, testID, tracker[0].tData[FieldID])
+		assert.Equal(t, testURL, tracker[0].tData[FieldURL])
 	})
 
 	t.Run("test multiple trackers return", func(t *testing.T) {
@@ -114,12 +119,12 @@ func TestTrackerService_TrackerWithDetails(t *testing.T) {
 		fields := []TrackerField{FieldID, FieldURL}
 		xmlRPCFields := []string{ti.InfoHash, FieldID.AsXMLRPCArgument(), FieldURL.AsXMLRPCArgument()}
 
-		mockClient.EXPECT().getSliceSliceByHash("t.multicall", xmlRPCFields).Return([][]interface{}{{"test_id", "test_url"}, {"test_id2", "test_url2"}}, nil)
+		mockClient.EXPECT().getSliceSliceByHash("t.multicall", xmlRPCFields).Return([][]interface{}{{testID, testURL}, {"test_id2", "test_url2"}}, nil)
 
 		tracker, err := ts.TrackerWithDetails(context.Background(), ti, fields)
 		assert.NoError(t, err)
-		assert.Equal(t, "test_id", tracker[0].tData[FieldID])
-		assert.Equal(t, "test_url", tracker[0].tData[FieldURL])
+		assert.Equal(t, testID, tracker[0].tData[FieldID])
+		assert.Equal(t, testURL, tracker[0].tData[FieldURL])
 		assert.Equal(t, 0, tracker[0].ti.Index)
 		assert.Equal(t, "test_id2", tracker[1].tData[FieldID])
 		assert.Equal(t, "test_url2", tracker[1].tData[FieldURL])
@@ -163,10 +168,10 @@ func TestTrackerService_contextWrapGetSliceSliceByHash(t *testing.T) {
 
 func TestTrackerDataFromSlice(t *testing.T) {
 	fields := []TrackerField{FieldID, FieldURL}
-	data := []interface{}{"test_id", "test_url"}
+	data := []interface{}{testID, testURL}
 
 	result, err := TrackerDataFromSlice(fields, data)
 	assert.NoError(t, err)
-	assert.Equal(t, "test_id", result[FieldID])
-	assert.Equal(t, "test_url", result[FieldURL])
+	assert.Equal(t, testID, result[FieldID])
+	assert.Equal(t, testURL, result[FieldURL])
 }

@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	invalidStringCase = "invalid string"
+	invalidTypeCase   = "invalid type"
+	stringCase        = "string"
+)
+
 func TestBoolFromAny(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -26,8 +32,8 @@ func TestBoolFromAny(t *testing.T) {
 		{"float64 0.0", 0.0, false, nil},
 		{"string true", "true", true, nil},
 		{"string false", "false", false, nil},
-		{"invalid string", "invalid", false, ErrBadData},
-		{"invalid type", []int{1}, false, ErrBadData},
+		{invalidStringCase, "invalid", false, ErrBadData},
+		{invalidTypeCase, []int{1}, false, ErrBadData},
 	}
 
 	for _, tt := range tests {
@@ -49,9 +55,9 @@ func TestIntFromAny(t *testing.T) {
 		{"int", 1, 1, nil},
 		{"int64", int64(1), 1, nil},
 		{"float64", 1.0, 1, nil},
-		{"string", "1", 1, nil},
-		{"invalid string", "invalid", 0, strconv.ErrSyntax},
-		{"invalid type", []int{1}, 0, ErrBadData},
+		{stringCase, "1", 1, nil},
+		{invalidStringCase, "invalid", 0, strconv.ErrSyntax},
+		{invalidTypeCase, []int{1}, 0, ErrBadData},
 	}
 
 	for _, tt := range tests {
@@ -73,9 +79,9 @@ func TestTimeFromAny(t *testing.T) {
 		{"int", 1, time.Unix(1, 0), nil},
 		{"int64", int64(1), time.Unix(1, 0), nil},
 		{"float64", 1.0, time.Unix(1, 0), nil},
-		{"string", "1", time.Unix(1, 0), nil},
-		{"invalid string", "foo bar baz", time.Time{}, ErrBadData},
-		{"invalid type", []int{1}, time.Time{}, ErrBadData},
+		{stringCase, "1", time.Unix(1, 0), nil},
+		{invalidStringCase, "foo bar baz", time.Time{}, ErrBadData},
+		{invalidTypeCase, []int{1}, time.Time{}, ErrBadData},
 	}
 
 	for _, tt := range tests {
@@ -94,8 +100,8 @@ func TestStringFromAny(t *testing.T) {
 		expected string
 		err      error
 	}{
-		{"string", "test", "test", nil},
-		{"invalid type", 1, "", ErrBadData},
+		{stringCase, "test", "test", nil},
+		{invalidTypeCase, 1, "", ErrBadData},
 	}
 
 	for _, tt := range tests {
