@@ -7,20 +7,30 @@ linters:
     - dogsled
     - dupl
     - durationcheck
+    - errorlint
     - exhaustive
+    - fatcontext
     - gochecknoinits
     - goconst
     - gocritic
     - gosec
+    - iface
+    - intrange
     - lll
     - misspell
     - mnd
+    - modernize
     - nakedret
+    - nilnesserr
     - noctx
     - nolintlint
+    - perfsprint
+    - recvcheck
     - staticcheck
+    - testifylint
     - unconvert
     - unparam
+    - usetesting
   settings:
     depguard:
       rules:
@@ -34,6 +44,9 @@ linters:
             - github.com/kolo/xmlrpc
     lll:
       line-length: 140
+    usetesting:
+      context-background: true
+      context-todo: true
   exclusions:
     generated: lax
     presets:
@@ -60,9 +73,6 @@ linters:
       - linters:
           - lll
         path: _test\.go
-      - linters:
-          - gocritic
-        text: appendAssign
       - linters:
           - gochecknoinits
         path: .*/cmd/.*\.go
