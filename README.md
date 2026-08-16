@@ -3,7 +3,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/aauren/rtorrent/rtorrent.svg)](https://pkg.go.dev/github.com/aauren/rtorrent/rtorrent)
 [![ci](https://github.com/aauren/rtorrent/actions/workflows/ci.yml/badge.svg)](https://github.com/aauren/rtorrent/actions/workflows/ci.yml)
 [![golangci-lint](https://github.com/aauren/rtorrent/actions/workflows/lint.yml/badge.svg)](https://github.com/aauren/rtorrent/actions/workflows/lint.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aauren/rtorrent)](https://goreportcard.com/report/github.com/aauren/rtorrent)
 
 Package `rtorrent` implements a client for rTorrent's XML-RPC interface. MIT Licensed.
 
