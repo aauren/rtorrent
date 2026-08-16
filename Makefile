@@ -8,7 +8,7 @@ GO_CACHE?=$(shell go env GOCACHE)
 DOCKER_LINT_IMAGE?=golangci/golangci-lint:v2.12.2
 DOCKER_BUILD_IMAGE?=golang:1.26.6-alpine3.24
 
-.PHONY: all test lint genmoqs instdeps gofmt gofmt-fix build
+.PHONY: all test lint genmoqs instdeps updatedeps gofmt gofmt-fix build
 
 gofmt:
 	gofmt -l -s $(shell find . -not \( \( -wholename '*/vendor/*' \) -prune \) -name '*.go')
@@ -18,15 +18,16 @@ gofmt-fix:
 	gofmt -s -w $(shell find . -not \( \( -wholename '*/vendor/*' \) -prune \) -name '*.go')
 
 instdeps:
-	go get ./...
-	go install go.uber.org/mock/mockgen@latest
+	go mod download
 
 updatedeps:
 	go get -u ./...
+	go mod tidy
 
-genmoqs: instdeps
+# mockgen is pinned by the tool directive in go.mod, so go generate always runs the version we expect
+genmoqs:
 	rm -f rtorrent/rtorrent_moq.go
-	mockgen -source=rtorrent/rtorrent.go -destination=rtorrent/rtorrent_moq.go -mock_names=New=NewMockClient -package=rtorrent
+	go generate ./...
 
 lint: gofmt
 ifeq "$(BUILD_IN_DOCKER)" "true"
