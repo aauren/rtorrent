@@ -2,6 +2,7 @@
 package rtorrent
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/kolo/xmlrpc"
@@ -32,7 +33,7 @@ type XMLRPCClient struct {
 func New(addr string, transport http.RoundTripper) (Client, error) {
 	xrc, err := xmlrpc.NewClient(addr, transport)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating xml-rpc client for %q: %w", addr, err)
 	}
 
 	c := &XMLRPCClient{
@@ -67,61 +68,65 @@ func (c *XMLRPCClient) UploadRate() (int, error) {
 	return c.getInt("up.rate", "")
 }
 
+// call runs the XML-RPC method and decodes into out, tagging failures with the method name because transport errors
+// on their own give no clue as to which call went wrong
+func (c *XMLRPCClient) call(method string, send any, out any) error {
+	if err := c.xrc.Call(method, send, out); err != nil {
+		return fmt.Errorf("xml-rpc call %q: %w", method, err)
+	}
+	return nil
+}
+
+// argsToAny widens the string args into the []any the XML-RPC codec expects, prefixed by the lead arguments
+func argsToAny(lead []any, args []string) []any {
+	send := make([]any, 0, len(lead)+len(args))
+	send = append(send, lead...)
+	for _, a := range args {
+		send = append(send, a)
+	}
+	return send
+}
+
 // getInt retrieves an integer value from the specified XML-RPC method.
 func (c *XMLRPCClient) getInt(method string, arg string) (int, error) {
-	var send interface{}
+	var send any
 	if arg != "" {
 		send = arg
 	}
 
 	var v int
-	err := c.xrc.Call(method, send, &v)
-	return v, err
+	return v, c.call(method, send, &v)
 }
 
 // getString retrieves a string value from the specified XML-RPC method.
 func (c *XMLRPCClient) getString(method string, arg string) (string, error) {
-	var send interface{}
+	var send any
 	if arg != "" {
 		send = arg
 	}
 
 	var v string
-	err := c.xrc.Call(method, send, &v)
-	return v, err
+	return v, c.call(method, send, &v)
 }
 
 // getStringSlice retrieves a slice of string values from the specified XML-RPC method.
 func (c *XMLRPCClient) getStringSlice(method string, args ...string) ([]string, error) {
-	send := []interface{}{""}
-	for _, a := range args {
-		send = append(send, a)
-	}
-
 	var v []string
-	err := c.xrc.Call(method, send, &v)
-	return v, err
+	return v, c.call(method, argsToAny([]any{""}, args), &v)
 }
 
 // getSliceSlice retrieves a slice of slice values from the specified XML-RPC method.
 func (c *XMLRPCClient) getSliceSlice(method string, args ...string) ([][]any, error) {
-	send := []interface{}{""}
-	for _, a := range args {
-		send = append(send, a)
-	}
-
 	var v [][]any
-	err := c.xrc.Call(method, send, &v)
-	return v, err
+	return v, c.call(method, argsToAny([]any{""}, args), &v)
 }
 
+// getSliceSliceByHash retrieves a slice of slice values scoped to the info-hash that must be passed as the first argument.
 func (c *XMLRPCClient) getSliceSliceByHash(method string, args ...string) ([][]any, error) {
-	send := []interface{}{args[0], ""}
-	for _, a := range args[1:] {
-		send = append(send, a)
+	if len(args) == 0 {
+		return nil, fmt.Errorf("%w: %s requires an info-hash as its first argument", ErrBadData, method)
 	}
 
 	var v [][]any
-	err := c.xrc.Call(method, send, &v)
-	return v, err
+	return v, c.call(method, argsToAny([]any{args[0], ""}, args[1:]), &v)
 }

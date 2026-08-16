@@ -1,284 +1,108 @@
 package rtorrent
 
 import (
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
-func TestClientDownloadsAll(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-		strings.Repeat("B", 40),
-		strings.Repeat("C", 40),
+var (
+	testInfoHash  = strings.Repeat("A", 40)
+	testDownloads = []string{strings.Repeat("A", 40), strings.Repeat("B", 40), strings.Repeat("C", 40)}
+)
+
+func TestDownloadServiceLists(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		filter string
+		call   func(*DownloadService) ([]string, error)
+	}{
+		{"all", "", (*DownloadService).All},
+		{"started", "started", (*DownloadService).Started},
+		{"stopped", "stopped", (*DownloadService).Stopped},
+		{"complete", "complete", (*DownloadService).Complete},
+		{"incomplete", "incomplete", (*DownloadService).Incomplete},
+		{"hashing", "hashing", (*DownloadService).Hashing},
+		{"seeding", "seeding", (*DownloadService).Seeding},
+		{"leeching", "leeching", (*DownloadService).Leeching},
+		{"active", "active", (*DownloadService).Active},
 	}
 
-	c, done := testClient(t, downloadList, []string{""}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	downloads, err := ds.All()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.All: %v", err)
-	}
+			// Every download_list call leads with an empty string, with the filter appended only when there is one
+			wantParams := []string{""}
+			if tt.filter != "" {
+				wantParams = append(wantParams, tt.filter)
+			}
 
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
+			ds := &DownloadService{C: testClient(t, downloadList, wantParams, testDownloads)}
 
-func TestClientDownloadsStarted(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
-
-	c, done := testClient(t, downloadList, []string{"started"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	downloads, err := ds.Started()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Started: %v", err)
-	}
-
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsStopped(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
-
-	c, done := testClient(t, downloadList, []string{"stopped"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	downloads, err := ds.Stopped()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Stopped: %v", err)
-	}
-
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
+			got, err := tt.call(ds)
+			require.NoError(t, err)
+			assert.Equal(t, testDownloads, got)
+		})
 	}
 }
 
-func TestClientDownloadsComplete(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
+func TestDownloadServiceCountersByInfoHash(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		method string
+		call   func(*DownloadService, string) (int, error)
+	}{
+		{"download rate", "d.down.rate", (*DownloadService).DownloadRate},
+		{"download total", "d.down.total", (*DownloadService).DownloadTotal},
+		{"upload rate", "d.up.rate", (*DownloadService).UploadRate},
+		{"upload total", "d.up.total", (*DownloadService).UploadTotal},
 	}
 
-	c, done := testClient(t, downloadList, []string{"complete"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	downloads, err := ds.Complete()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Complete: %v", err)
-	}
+			ds := &DownloadService{C: testClient(t, tt.method, []string{testInfoHash}, testBytes)}
 
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsIncomplete(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
-
-	c, done := testClient(t, downloadList, []string{"incomplete"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	downloads, err := ds.Incomplete()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Incomplete: %v", err)
-	}
-
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
+			got, err := tt.call(ds, testInfoHash)
+			require.NoError(t, err)
+			assert.Equal(t, testBytes, got)
+		})
 	}
 }
 
-func TestClientDownloadsHashing(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
+func TestDownloadServiceBaseFilename(t *testing.T) {
+	t.Parallel()
 
-	c, done := testClient(t, downloadList, []string{"hashing"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
+	const wantName = "foobar"
 
-	downloads, err := ds.Hashing()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Hashing: %v", err)
-	}
+	ds := &DownloadService{C: testClient(t, "d.base_filename", []string{testInfoHash}, wantName)}
 
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
+	got, err := ds.BaseFilename(testInfoHash)
+	require.NoError(t, err)
+	assert.Equal(t, wantName, got)
 }
 
-func TestClientDownloadsSeeding(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
+func TestDownloadServiceWithDetails(t *testing.T) {
+	t.Parallel()
 
-	c, done := testClient(t, downloadList, []string{"seeding"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
+	ctrl := gomock.NewController(t)
+	mockClient := NewMockClient(ctrl)
+	ds := &DownloadService{C: mockClient}
 
-	downloads, err := ds.Seeding()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Seeding: %v", err)
-	}
+	// DownloadWithDetails always prepends "default" to the caller's commands
+	mockClient.EXPECT().getSliceSlice(downloadListMultiCall, "default", "d.name=").
+		Return([][]any{{"a name"}}, nil)
 
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsLeeching(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
-
-	c, done := testClient(t, downloadList, []string{"leeching"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	downloads, err := ds.Leeching()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Leeching: %v", err)
-	}
-
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsActive(t *testing.T) {
-	wantDownloads := []string{
-		strings.Repeat("A", 40),
-	}
-
-	c, done := testClient(t, downloadList, []string{"active"}, wantDownloads)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	downloads, err := ds.Active()
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.Active: %v", err)
-	}
-
-	if want, got := wantDownloads, downloads; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected downloads:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsBaseFilename(t *testing.T) {
-	wantName := "foobar"
-	wantHash := strings.Repeat("A", 40)
-
-	c, done := testClient(t, "d.base_filename", []string{wantHash}, wantName)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	name, err := ds.BaseFilename(wantHash)
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.BaseFilename: %v", err)
-	}
-
-	if want, got := wantName, name; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected name:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsDownloadRate(t *testing.T) {
-	wantRate := 1024
-	wantHash := strings.Repeat("A", 40)
-
-	c, done := testClient(t, "d.down.rate", []string{wantHash}, wantRate)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	rate, err := ds.DownloadRate(wantHash)
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.DownloadRate: %v", err)
-	}
-
-	if want, got := wantRate, rate; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected download rate:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsDownloadTotal(t *testing.T) {
-	wantTotal := 1024
-	wantHash := strings.Repeat("A", 40)
-
-	c, done := testClient(t, "d.down.total", []string{wantHash}, wantTotal)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	total, err := ds.DownloadTotal(wantHash)
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.DownloadTotal: %v", err)
-	}
-
-	if want, got := wantTotal, total; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected download total:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsUploadRate(t *testing.T) {
-	wantRate := 1024
-	wantHash := strings.Repeat("A", 40)
-
-	c, done := testClient(t, "d.up.rate", []string{wantHash}, wantRate)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	rate, err := ds.UploadRate(wantHash)
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.UploadRate: %v", err)
-	}
-
-	if want, got := wantRate, rate; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected upload rate:\n- want: %v\n-  got: %v",
-			want, got)
-	}
-}
-
-func TestClientDownloadsUploadTotal(t *testing.T) {
-	wantTotal := 1024
-	wantHash := strings.Repeat("A", 40)
-
-	c, done := testClient(t, "d.up.total", []string{wantHash}, wantTotal)
-	defer done()
-	ds := &DownloadService{C: c}
-
-	total, err := ds.UploadTotal(wantHash)
-	if err != nil {
-		t.Fatalf("failed call to Client.Downloads.UploadTotal: %v", err)
-	}
-
-	if want, got := wantTotal, total; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected upload total:\n- want: %v\n-  got: %v",
-			want, got)
-	}
+	got, err := ds.DownloadWithDetails([]string{"d.name="})
+	require.NoError(t, err)
+	assert.Equal(t, [][]any{{"a name"}}, got)
 }
