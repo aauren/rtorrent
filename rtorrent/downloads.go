@@ -1,5 +1,7 @@
 package rtorrent
 
+import "slices"
+
 const (
 	// downloadList is used in methods which retrieve a list of downloads.
 	downloadList = "download_list"
@@ -61,8 +63,7 @@ func (s *DownloadService) Active() ([]string, error) {
 
 // DownloadWithDetails retrieves a list of downloads from rTorrent along with additional details as specified by the commands slice.
 func (s *DownloadService) DownloadWithDetails(commands []string) ([][]any, error) {
-	newCmds := append([]string{"default"}, commands...)
-	return s.C.getSliceSlice(downloadListMultiCall, newCmds...)
+	return s.C.getSliceSlice(downloadListMultiCall, slices.Concat([]string{"default"}, commands)...)
 }
 
 // BaseFilename retrieves the base filename shown in the rTorrent UI for a specific download, by its info-hash.
