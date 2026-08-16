@@ -7,6 +7,8 @@ import (
 	"github.com/kolo/xmlrpc"
 )
 
+//go:generate go tool mockgen -source=rtorrent.go -destination=rtorrent_moq.go -package=rtorrent -typed
+
 type Client interface {
 	Close() error
 	DownloadTotal() (int, error)
