@@ -7,6 +7,8 @@ GO_MOD_CACHE?=$(shell go env GOMODCACHE)
 GO_CACHE?=$(shell go env GOCACHE)
 DOCKER_LINT_IMAGE?=golangci/golangci-lint:v2.12.2
 DOCKER_BUILD_IMAGE?=golang:1.26.6-alpine3.24
+# The race detector needs cgo, which the alpine image has no toolchain for, so tests run on the Debian-based image
+DOCKER_TEST_IMAGE?=golang:1.26.6
 
 .PHONY: all test lint genmoqs instdeps updatedeps gofmt gofmt-fix build
 
@@ -46,11 +48,11 @@ ifeq "$(BUILD_IN_DOCKER)" "true"
 	$(DOCKER) run -v $(PWD):/go/src/github.com/aauren/rtorrent \
 		-v $(GO_CACHE):/root/.cache/go-build \
 		-v $(GO_MOD_CACHE):/go/pkg/mod \
-		-w /go/src/github.com/aauren/rtorrent $(DOCKER_BUILD_IMAGE) \
+		-w /go/src/github.com/aauren/rtorrent $(DOCKER_TEST_IMAGE) \
 		sh -c \
-		'CGO_ENABLED=0 go test -v -timeout 30s github.com/aauren/rtorrent/rtorrent/...'
+		'go test -v -race -shuffle=on -cover -timeout 60s github.com/aauren/rtorrent/rtorrent/...'
 else
-	go test -v -timeout 30s github.com/aauren/rtorrent/rtorrent/...
+	go test -v -race -shuffle=on -cover -timeout 60s github.com/aauren/rtorrent/rtorrent/...
 endif
 
 build:
