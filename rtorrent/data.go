@@ -1,11 +1,14 @@
 package rtorrent
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 )
 
-func boolFromAny(data interface{}) (bool, error) {
+// Converters wrap failures in ErrBadData for a single errors.Is check, while multi-%w keeps the strconv error reachable
+
+func boolFromAny(data any) (bool, error) {
 	switch v := data.(type) {
 	case bool:
 		return v, nil
@@ -18,15 +21,15 @@ func boolFromAny(data interface{}) (bool, error) {
 	case string:
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			return false, ErrBadData
+			return false, fmt.Errorf("%w: %w", ErrBadData, err)
 		}
 		return b, nil
 	default:
-		return false, ErrBadData
+		return false, fmt.Errorf("%w: cannot convert %T to bool", ErrBadData, data)
 	}
 }
 
-func intFromAny(data interface{}) (int, error) {
+func intFromAny(data any) (int, error) {
 	switch v := data.(type) {
 	case int:
 		return v, nil
@@ -35,13 +38,17 @@ func intFromAny(data interface{}) (int, error) {
 	case float64:
 		return int(v), nil
 	case string:
-		return strconv.Atoi(v)
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, fmt.Errorf("%w: %w", ErrBadData, err)
+		}
+		return i, nil
 	default:
-		return 0, ErrBadData
+		return 0, fmt.Errorf("%w: cannot convert %T to int", ErrBadData, data)
 	}
 }
 
-func timeFromAny(data interface{}) (time.Time, error) {
+func timeFromAny(data any) (time.Time, error) {
 	switch v := data.(type) {
 	case int:
 		return time.Unix(int64(v), 0), nil
@@ -52,19 +59,19 @@ func timeFromAny(data interface{}) (time.Time, error) {
 	case string:
 		timeInt, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return time.Time{}, ErrBadData
+			return time.Time{}, fmt.Errorf("%w: %w", ErrBadData, err)
 		}
 		return time.Unix(timeInt, 0), nil
 	default:
-		return time.Time{}, ErrBadData
+		return time.Time{}, fmt.Errorf("%w: cannot convert %T to time.Time", ErrBadData, data)
 	}
 }
 
-func stringFromAny(data interface{}) (string, error) {
+func stringFromAny(data any) (string, error) {
 	switch v := data.(type) {
 	case string:
 		return v, nil
 	default:
-		return "", ErrBadData
+		return "", fmt.Errorf("%w: cannot convert %T to string", ErrBadData, data)
 	}
 }

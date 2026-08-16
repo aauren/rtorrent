@@ -1,12 +1,12 @@
 package rtorrent
 
 import (
-	"errors"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -16,9 +16,11 @@ const (
 )
 
 func TestBoolFromAny(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected bool
 		err      error
 	}{
@@ -38,65 +40,90 @@ func TestBoolFromAny(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := boolFromAny(tt.input)
 			assert.Equal(t, tt.expected, result)
-			assert.Equal(t, tt.err, err)
+			assert.ErrorIs(t, err, tt.err)
 		})
 	}
 }
 
 func TestIntFromAny(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected int
-		err      error
+		errs     []error
 	}{
 		{"int", 1, 1, nil},
 		{"int64", int64(1), 1, nil},
 		{"float64", 1.0, 1, nil},
 		{stringCase, "1", 1, nil},
-		{invalidStringCase, "invalid", 0, strconv.ErrSyntax},
-		{invalidTypeCase, []int{1}, 0, ErrBadData},
+		// A bad parse reports both our own sentinel and the underlying strconv error, courtesy of multi-%w
+		{invalidStringCase, "invalid", 0, []error{ErrBadData, strconv.ErrSyntax}},
+		{invalidTypeCase, []int{1}, 0, []error{ErrBadData}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := intFromAny(tt.input)
 			assert.Equal(t, tt.expected, result)
-			assert.True(t, errors.Is(err, tt.err), "expected %v, got %v", tt.err, err)
+			if tt.errs == nil {
+				require.NoError(t, err)
+				return
+			}
+			for _, want := range tt.errs {
+				assert.ErrorIs(t, err, want)
+			}
 		})
 	}
 }
 
 func TestTimeFromAny(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected time.Time
-		err      error
+		errs     []error
 	}{
 		{"int", 1, time.Unix(1, 0), nil},
 		{"int64", int64(1), time.Unix(1, 0), nil},
 		{"float64", 1.0, time.Unix(1, 0), nil},
 		{stringCase, "1", time.Unix(1, 0), nil},
-		{invalidStringCase, "foo bar baz", time.Time{}, ErrBadData},
-		{invalidTypeCase, []int{1}, time.Time{}, ErrBadData},
+		{invalidStringCase, "foo bar baz", time.Time{}, []error{ErrBadData, strconv.ErrSyntax}},
+		{invalidTypeCase, []int{1}, time.Time{}, []error{ErrBadData}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := timeFromAny(tt.input)
 			assert.Equal(t, tt.expected, result)
-			assert.True(t, errors.Is(err, tt.err), "expected %v, got %v", tt.err, err)
+			if tt.errs == nil {
+				require.NoError(t, err)
+				return
+			}
+			for _, want := range tt.errs {
+				assert.ErrorIs(t, err, want)
+			}
 		})
 	}
 }
 
 func TestStringFromAny(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected string
 		err      error
 	}{
@@ -106,9 +133,11 @@ func TestStringFromAny(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := stringFromAny(tt.input)
 			assert.Equal(t, tt.expected, result)
-			assert.Equal(t, tt.err, err)
+			assert.ErrorIs(t, err, tt.err)
 		})
 	}
 }
