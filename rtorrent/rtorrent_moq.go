@@ -233,6 +233,49 @@ func (c *MockClientUploadTotalCall) DoAndReturn(f func() (int, error)) *MockClie
 	return c
 }
 
+// commandByHash mocks base method.
+func (m *MockClient) commandByHash(method string, args ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []any{method}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "commandByHash", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// commandByHash indicates an expected call of commandByHash.
+func (mr *MockClientMockRecorder) commandByHash(method any, args ...any) *MockClientcommandByHashCall {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{method}, args...)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "commandByHash", reflect.TypeOf((*MockClient)(nil).commandByHash), varargs...)
+	return &MockClientcommandByHashCall{Call: call}
+}
+
+// MockClientcommandByHashCall wrap *gomock.Call
+type MockClientcommandByHashCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientcommandByHashCall) Return(arg0 error) *MockClientcommandByHashCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientcommandByHashCall) Do(f func(string, ...string) error) *MockClientcommandByHashCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientcommandByHashCall) DoAndReturn(f func(string, ...string) error) *MockClientcommandByHashCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // getInt mocks base method.
 func (m *MockClient) getInt(method, arg string) (int, error) {
 	m.ctrl.T.Helper()
@@ -439,6 +482,50 @@ func (c *MockClientgetStringSliceCall) Do(f func(string, ...string) ([]string, e
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockClientgetStringSliceCall) DoAndReturn(f func(string, ...string) ([]string, error)) *MockClientgetStringSliceCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// multicallByHash mocks base method.
+func (m *MockClient) multicallByHash(infoHash string, methods ...string) ([]any, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{infoHash}
+	for _, a := range methods {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "multicallByHash", varargs...)
+	ret0, _ := ret[0].([]any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// multicallByHash indicates an expected call of multicallByHash.
+func (mr *MockClientMockRecorder) multicallByHash(infoHash any, methods ...any) *MockClientmulticallByHashCall {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{infoHash}, methods...)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "multicallByHash", reflect.TypeOf((*MockClient)(nil).multicallByHash), varargs...)
+	return &MockClientmulticallByHashCall{Call: call}
+}
+
+// MockClientmulticallByHashCall wrap *gomock.Call
+type MockClientmulticallByHashCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientmulticallByHashCall) Return(arg0 []any, arg1 error) *MockClientmulticallByHashCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientmulticallByHashCall) Do(f func(string, ...string) ([]any, error)) *MockClientmulticallByHashCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientmulticallByHashCall) DoAndReturn(f func(string, ...string) ([]any, error)) *MockClientmulticallByHashCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

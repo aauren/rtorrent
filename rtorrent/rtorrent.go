@@ -4,6 +4,7 @@ package rtorrent
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/kolo/xmlrpc"
 )
@@ -22,6 +23,8 @@ type Client interface {
 	getStringSlice(method string, args ...string) ([]string, error)
 	getInt(method string, arg string) (int, error)
 	getString(method string, arg string) (string, error)
+	commandByHash(method string, args ...string) error
+	multicallByHash(infoHash string, methods ...string) ([]any, error)
 }
 
 // A XMLRPCClient is an rTorrent client.  It can be used to retrieve a variety of statistics from rTorrent.
@@ -129,4 +132,70 @@ func (c *XMLRPCClient) getSliceSliceByHash(method string, args ...string) ([][]a
 
 	var v [][]any
 	return v, c.call(method, argsToAny([]any{args[0], ""}, args[1:]), &v)
+}
+
+// commandByHash runs a command whose target is the info-hash passed as the first argument, discarding the result
+func (c *XMLRPCClient) commandByHash(method string, args ...string) error {
+	if len(args) == 0 || args[0] == "" {
+		return fmt.Errorf("%w: %s requires an info-hash as its first argument", ErrBadData, method)
+	}
+
+	var v any
+	return c.call(method, argsToAny(nil, args), &v)
+}
+
+// multicallByHash runs each method against infoHash in a single system.multicall, returning one value per method.
+// A fault on any one method fails the whole call, carrying the xmlrpc.FaultError rTorrent sent for it.
+func (c *XMLRPCClient) multicallByHash(infoHash string, methods ...string) ([]any, error) {
+	if infoHash == "" {
+		return nil, fmt.Errorf("%w: system.multicall requires an info-hash", ErrBadData)
+	}
+
+	calls := make([]multicallEntry, 0, len(methods))
+	for _, m := range methods {
+		calls = append(calls, multicallEntry{MethodName: strings.TrimSuffix(m, "="), Params: []any{infoHash}})
+	}
+
+	var raw []any
+	if err := c.call("system.multicall", []any{calls}, &raw); err != nil {
+		return nil, err
+	}
+	if len(raw) != len(methods) {
+		return nil, fmt.Errorf("%w: system.multicall returned %d results for %d methods", ErrBadData, len(raw), len(methods))
+	}
+
+	out := make([]any, 0, len(raw))
+	for _, r := range raw {
+		v, err := multicallValue(r)
+		if err != nil {
+			return nil, fmt.Errorf("xml-rpc call %q: %w", methods[len(out)], err)
+		}
+		out = append(out, v)
+	}
+	return out, nil
+}
+
+// multicallEntry is a struct rather than a map because newer rTorrent parsers need methodName before params, and
+// map iteration order would shuffle them
+type multicallEntry struct {
+	MethodName string `xmlrpc:"methodName"`
+	Params     []any  `xmlrpc:"params"`
+}
+
+// multicallValue unwraps one system.multicall result, which is a one-element array on success or a fault struct
+func multicallValue(r any) (any, error) {
+	switch v := r.(type) {
+	case []any:
+		if len(v) != 1 {
+			return nil, fmt.Errorf("%w: expected 1 value, got %d", ErrBadData, len(v))
+		}
+		return v[0], nil
+	case map[string]any:
+		fault := xmlrpc.FaultError{}
+		fault.Code, _ = intFromAny(v["faultCode"])
+		fault.String, _ = stringFromAny(v["faultString"])
+		return nil, fault
+	default:
+		return nil, fmt.Errorf("%w: unexpected multicall result %T", ErrBadData, r)
+	}
 }

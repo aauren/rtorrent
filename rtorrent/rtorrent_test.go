@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/kolo/xmlrpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,6 +48,110 @@ func TestGetSliceSliceByHashRequiresInfoHash(t *testing.T) {
 
 	c := &XMLRPCClient{}
 	_, err := c.getSliceSliceByHash(trackerListMultiCall)
+	require.ErrorIs(t, err, ErrBadData)
+}
+
+func TestMulticallByHash(t *testing.T) {
+	t.Parallel()
+
+	const (
+		okReply = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
+<value><array><data><value><string>a name</string></value></data></array></value>
+<value><array><data><value><i8>1</i8></value></data></array></value>
+</data></array></value></param></params></methodResponse>`
+		faultReply = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
+<value><array><data><value><string>a name</string></value></data></array></value>
+<value><struct><member><name>faultCode</name><value><i4>-501</i4></value></member>
+<member><name>faultString</name><value><string>Could not find info-hash.</string></value></member></struct></value>
+</data></array></value></param></params></methodResponse>`
+		shortReply = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
+<value><array><data><value><string>a name</string></value></data></array></value>
+</data></array></value></param></params></methodResponse>`
+	)
+
+	tests := []struct {
+		name      string
+		reply     string
+		want      []any
+		wantErr   error
+		wantFault string
+	}{
+		{name: "values are unwrapped in order", reply: okReply, want: []any{testName, int64(1)}},
+		{name: "a fault on one method fails the call", reply: faultReply, wantFault: "Could not find info-hash."},
+		{name: "result count mismatch", reply: shortReply, wantErr: ErrBadData},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Errorf("reading request: %v", err)
+					return
+				}
+				for _, want := range []string{
+					"<methodName>system.multicall</methodName>",
+					"<string>d.name</string>",
+					"<string>d.complete</string>",
+					"<string>" + testInfoHash + "</string>",
+				} {
+					assert.Contains(t, string(body), want)
+				}
+				_, _ = io.WriteString(w, tt.reply)
+			}))
+			t.Cleanup(s.Close)
+
+			c, err := New(s.URL, nil)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = c.Close() })
+
+			got, err := c.multicallByHash(testInfoHash, "d.name", "d.complete=")
+			switch {
+			case tt.wantFault != "":
+				var fault xmlrpc.FaultError
+				require.ErrorAs(t, err, &fault)
+				assert.Equal(t, tt.wantFault, fault.String)
+				assert.Equal(t, -501, fault.Code)
+			case tt.wantErr != nil:
+				require.ErrorIs(t, err, tt.wantErr)
+			default:
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestMulticallByHashKeepsMethodNameFirst(t *testing.T) {
+	t.Parallel()
+
+	methods := slices.Repeat([]string{"d.name"}, 64)
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("reading request: %v", err)
+			return
+		}
+		assert.Equal(t, len(methods), strings.Count(string(body), "<struct><member><name>methodName</name>"),
+			"every entry must lead with methodName")
+		http.Error(w, "done", http.StatusInternalServerError)
+	}))
+	t.Cleanup(s.Close)
+
+	c, err := New(s.URL, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+
+	_, err = c.multicallByHash(testInfoHash, methods...)
+	require.Error(t, err)
+}
+
+func TestMulticallByHashRequiresInfoHash(t *testing.T) {
+	t.Parallel()
+
+	_, err := (&XMLRPCClient{}).multicallByHash("", "d.name")
 	require.ErrorIs(t, err, ErrBadData)
 }
 

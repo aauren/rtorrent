@@ -66,6 +66,58 @@ func (s *DownloadService) DownloadWithDetails(commands []string) ([][]any, error
 	return s.C.getSliceSlice(downloadListMultiCall, slices.Concat([]string{"default"}, commands)...)
 }
 
+// DownloadDetails retrieves the given commands for one download in a single round trip, returning one value per
+// command in order. Commands may be written with or without the trailing "=" that DownloadWithDetails expects.
+func (s *DownloadService) DownloadDetails(infoHash string, commands []string) ([]any, error) {
+	return s.C.multicallByHash(infoHash, commands...)
+}
+
+// Start starts a download, by its info-hash.
+func (s *DownloadService) Start(infoHash string) error {
+	return s.C.commandByHash("d.start", infoHash)
+}
+
+// Stop stops a download without closing its files, by its info-hash.
+func (s *DownloadService) Stop(infoHash string) error {
+	return s.C.commandByHash("d.stop", infoHash)
+}
+
+// Open opens a download's files, by its info-hash.
+func (s *DownloadService) Open(infoHash string) error {
+	return s.C.commandByHash("d.open", infoHash)
+}
+
+// Close closes a download's files, by its info-hash. rTorrent refuses to move a download's directory while it's open.
+func (s *DownloadService) Close(infoHash string) error {
+	return s.C.commandByHash("d.close", infoHash)
+}
+
+// Erase removes a download from rTorrent, by its info-hash. It never touches the data on disk.
+func (s *DownloadService) Erase(infoHash string) error {
+	return s.C.commandByHash("d.erase", infoHash)
+}
+
+// CheckHash queues a hash check of a download's data, by its info-hash. It returns before the check finishes.
+func (s *DownloadService) CheckHash(infoHash string) error {
+	return s.C.commandByHash("d.check_hash", infoHash)
+}
+
+// SetDirectory points a download at a new directory, by its info-hash. For a multi-file download rTorrent appends the
+// download's name, so dir is the parent of the download's own folder.
+func (s *DownloadService) SetDirectory(infoHash, dir string) error {
+	return s.C.commandByHash("d.directory.set", infoHash, dir)
+}
+
+// SetMessage replaces a download's message, by its info-hash. An empty msg clears it.
+func (s *DownloadService) SetMessage(infoHash, msg string) error {
+	return s.C.commandByHash("d.message.set", infoHash, msg)
+}
+
+// SetCustom1 sets a download's custom1 field, by its info-hash, which ruTorrent and most tools use as the label.
+func (s *DownloadService) SetCustom1(infoHash, value string) error {
+	return s.C.commandByHash("d.custom1.set", infoHash, value)
+}
+
 // BaseFilename retrieves the base filename shown in the rTorrent UI for a specific download, by its info-hash.
 func (s *DownloadService) BaseFilename(infoHash string) (string, error) {
 	return s.C.getString("d.base_filename", infoHash)
