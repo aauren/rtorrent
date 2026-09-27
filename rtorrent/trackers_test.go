@@ -119,6 +119,43 @@ func TestTracker_GetFieldValueAsString(t *testing.T) {
 	assert.Equal(t, noValueStr, tracker.GetFieldValueAsString(FieldURL), "known field, absent from this tracker")
 }
 
+func TestTracker_ScrapeFields(t *testing.T) {
+	t.Parallel()
+
+	tracker := &Tracker{tData: map[TrackerField]any{
+		FieldScrapeComplete:   int64(12),
+		FieldScrapeIncomplete: int64(3),
+		FieldScrapeDownloaded: int64(40),
+		FieldScrapeCounter:    int64(7),
+		FieldScrapeTimeLast:   int64(1700000000),
+	}}
+
+	tests := []struct {
+		name string
+		get  func() (int, error)
+		want int
+	}{
+		{"seeders", tracker.ScrapeComplete, 12},
+		{"leechers", tracker.ScrapeIncomplete, 3},
+		{"downloaded", tracker.ScrapeDownloaded, 40},
+		{"counter", tracker.ScrapeCounter, 7},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := tt.get()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+
+	last, err := tracker.ScrapeTimeLast()
+	require.NoError(t, err)
+	assert.Equal(t, int64(1700000000), last.Unix())
+	assert.Equal(t, "12", tracker.GetFieldValueAsString(FieldScrapeComplete))
+}
+
 func TestTracker_StringIsDeterministic(t *testing.T) {
 	t.Parallel()
 

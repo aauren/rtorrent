@@ -36,26 +36,31 @@ var (
 
 // XMLRPC Tracker Fields
 const (
-	FieldCanScrape      = TrackerField("can_scrape")
-	FieldIsUsable       = TrackerField("is_usable")
-	FieldIsEnabled      = TrackerField("is_enabled")
-	FieldFailedCounter  = TrackerField("failed_counter")
-	FieldActivityLast   = TrackerField("activity_time_last")
-	FieldActivityNext   = TrackerField("activity_time_next")
-	FieldFailedLast     = TrackerField("failed_time_last")
-	FieldFailedNext     = TrackerField("failed_time_next")
-	FieldID             = TrackerField("id")
-	FieldIsBusy         = TrackerField("is_busy")
-	FieldIsOpen         = TrackerField("is_open")
-	FiledIsExtraTracker = TrackerField("is_extra_tracker")
-	FieldLatestEvent    = TrackerField("latest_event")
-	FieldMinInterval    = TrackerField("min_interval")
-	FieldNormalInterval = TrackerField("normal_interval")
-	FieldSuccessCounter = TrackerField("success_counter")
-	FieldSuccessLast    = TrackerField("success_time_last")
-	FieldSuccessNext    = TrackerField("success_time_next")
-	FieldType           = TrackerField("type")
-	FieldURL            = TrackerField("url")
+	FieldCanScrape        = TrackerField("can_scrape")
+	FieldIsUsable         = TrackerField("is_usable")
+	FieldIsEnabled        = TrackerField("is_enabled")
+	FieldFailedCounter    = TrackerField("failed_counter")
+	FieldActivityLast     = TrackerField("activity_time_last")
+	FieldActivityNext     = TrackerField("activity_time_next")
+	FieldFailedLast       = TrackerField("failed_time_last")
+	FieldFailedNext       = TrackerField("failed_time_next")
+	FieldID               = TrackerField("id")
+	FieldIsBusy           = TrackerField("is_busy")
+	FieldIsOpen           = TrackerField("is_open")
+	FiledIsExtraTracker   = TrackerField("is_extra_tracker")
+	FieldLatestEvent      = TrackerField("latest_event")
+	FieldMinInterval      = TrackerField("min_interval")
+	FieldNormalInterval   = TrackerField("normal_interval")
+	FieldScrapeComplete   = TrackerField("scrape_complete")
+	FieldScrapeIncomplete = TrackerField("scrape_incomplete")
+	FieldScrapeDownloaded = TrackerField("scrape_downloaded")
+	FieldScrapeCounter    = TrackerField("scrape_counter")
+	FieldScrapeTimeLast   = TrackerField("scrape_time_last")
+	FieldSuccessCounter   = TrackerField("success_counter")
+	FieldSuccessLast      = TrackerField("success_time_last")
+	FieldSuccessNext      = TrackerField("success_time_next")
+	FieldType             = TrackerField("type")
+	FieldURL              = TrackerField("url")
 )
 
 // Tracker Events
@@ -77,26 +82,31 @@ const (
 // fieldStringers maps every retrievable field to a renderer. Its key set is the authoritative list of valid fields
 // (see AllTrackerFields) so the two can't drift apart.
 var fieldStringers = map[TrackerField]func(*Tracker) (string, error){
-	FieldCanScrape:      stringerFor((*Tracker).CanScrape, strconv.FormatBool),
-	FieldIsUsable:       stringerFor((*Tracker).IsUsable, strconv.FormatBool),
-	FieldIsEnabled:      stringerFor((*Tracker).IsEnabled, strconv.FormatBool),
-	FieldFailedCounter:  stringerFor((*Tracker).FailedCounter, strconv.Itoa),
-	FieldActivityLast:   stringerFor((*Tracker).ActivityLastTime, time.Time.String),
-	FieldActivityNext:   stringerFor((*Tracker).ActivityTimeNext, time.Time.String),
-	FieldFailedLast:     stringerFor((*Tracker).FailedTimeLast, time.Time.String),
-	FieldFailedNext:     stringerFor((*Tracker).FailedTimeNext, time.Time.String),
-	FieldID:             stringerFor((*Tracker).ID, identity),
-	FieldIsBusy:         stringerFor((*Tracker).IsBusy, strconv.FormatBool),
-	FieldIsOpen:         stringerFor((*Tracker).IsOpen, strconv.FormatBool),
-	FiledIsExtraTracker: stringerFor((*Tracker).IsExtraTracker, strconv.FormatBool),
-	FieldLatestEvent:    stringerFor((*Tracker).LatestEvent, TrackerEvent.String),
-	FieldMinInterval:    stringerFor((*Tracker).MinInterval, strconv.Itoa),
-	FieldNormalInterval: stringerFor((*Tracker).NormalInterval, strconv.Itoa),
-	FieldSuccessCounter: stringerFor((*Tracker).SuccessCounter, strconv.Itoa),
-	FieldSuccessLast:    stringerFor((*Tracker).SuccessTimeLast, time.Time.String),
-	FieldSuccessNext:    stringerFor((*Tracker).SuccessTimeNext, time.Time.String),
-	FieldType:           stringerFor((*Tracker).Type, TrackerType.String),
-	FieldURL:            stringerFor((*Tracker).URL, identity),
+	FieldCanScrape:        stringerFor((*Tracker).CanScrape, strconv.FormatBool),
+	FieldIsUsable:         stringerFor((*Tracker).IsUsable, strconv.FormatBool),
+	FieldIsEnabled:        stringerFor((*Tracker).IsEnabled, strconv.FormatBool),
+	FieldFailedCounter:    stringerFor((*Tracker).FailedCounter, strconv.Itoa),
+	FieldActivityLast:     stringerFor((*Tracker).ActivityLastTime, time.Time.String),
+	FieldActivityNext:     stringerFor((*Tracker).ActivityTimeNext, time.Time.String),
+	FieldFailedLast:       stringerFor((*Tracker).FailedTimeLast, time.Time.String),
+	FieldFailedNext:       stringerFor((*Tracker).FailedTimeNext, time.Time.String),
+	FieldID:               stringerFor((*Tracker).ID, identity),
+	FieldIsBusy:           stringerFor((*Tracker).IsBusy, strconv.FormatBool),
+	FieldIsOpen:           stringerFor((*Tracker).IsOpen, strconv.FormatBool),
+	FiledIsExtraTracker:   stringerFor((*Tracker).IsExtraTracker, strconv.FormatBool),
+	FieldLatestEvent:      stringerFor((*Tracker).LatestEvent, TrackerEvent.String),
+	FieldMinInterval:      stringerFor((*Tracker).MinInterval, strconv.Itoa),
+	FieldNormalInterval:   stringerFor((*Tracker).NormalInterval, strconv.Itoa),
+	FieldScrapeComplete:   stringerFor((*Tracker).ScrapeComplete, strconv.Itoa),
+	FieldScrapeIncomplete: stringerFor((*Tracker).ScrapeIncomplete, strconv.Itoa),
+	FieldScrapeDownloaded: stringerFor((*Tracker).ScrapeDownloaded, strconv.Itoa),
+	FieldScrapeCounter:    stringerFor((*Tracker).ScrapeCounter, strconv.Itoa),
+	FieldScrapeTimeLast:   stringerFor((*Tracker).ScrapeTimeLast, time.Time.String),
+	FieldSuccessCounter:   stringerFor((*Tracker).SuccessCounter, strconv.Itoa),
+	FieldSuccessLast:      stringerFor((*Tracker).SuccessTimeLast, time.Time.String),
+	FieldSuccessNext:      stringerFor((*Tracker).SuccessTimeNext, time.Time.String),
+	FieldType:             stringerFor((*Tracker).Type, TrackerType.String),
+	FieldURL:              stringerFor((*Tracker).URL, identity),
 }
 
 // AllTrackerFields returns every retrievable tracker field, sorted. We hand back a fresh slice each call so callers
@@ -330,6 +340,31 @@ func (t *Tracker) MinInterval() (int, error) {
 // NormalInterval Returns the values for the normal announce intervals as returned from the tracker request.
 func (t *Tracker) NormalInterval() (int, error) {
 	return trackerField(t, FieldNormalInterval, intFromAny)
+}
+
+// ScrapeComplete Returns the number of seeders the tracker reported on its last scrape.
+func (t *Tracker) ScrapeComplete() (int, error) {
+	return trackerField(t, FieldScrapeComplete, intFromAny)
+}
+
+// ScrapeIncomplete Returns the number of leechers the tracker reported on its last scrape.
+func (t *Tracker) ScrapeIncomplete() (int, error) {
+	return trackerField(t, FieldScrapeIncomplete, intFromAny)
+}
+
+// ScrapeDownloaded Returns the number of completed downloads the tracker reported on its last scrape.
+func (t *Tracker) ScrapeDownloaded() (int, error) {
+	return trackerField(t, FieldScrapeDownloaded, intFromAny)
+}
+
+// ScrapeCounter Returns the number of successful scrapes of the tracker.
+func (t *Tracker) ScrapeCounter() (int, error) {
+	return trackerField(t, FieldScrapeCounter, intFromAny)
+}
+
+// ScrapeTimeLast Returns the last time the tracker was successfully scraped, which is the Unix epoch if it never was.
+func (t *Tracker) ScrapeTimeLast() (time.Time, error) {
+	return trackerField(t, FieldScrapeTimeLast, timeFromAny)
 }
 
 // SuccessCounter Returns the number of successful requests to the tracker.
