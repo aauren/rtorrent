@@ -93,7 +93,8 @@ func (s *DownloadService) Close(infoHash string) error {
 	return s.C.commandByHash("d.close", infoHash)
 }
 
-// Erase removes a download from rTorrent, by its info-hash. It never touches the data on disk.
+// Erase removes a download from rTorrent, by its info-hash. rTorrent itself leaves the data on disk, but a lot of
+// setups (ruTorrent's default config, for one) hook event.download.erased to delete it, so don't count on that.
 func (s *DownloadService) Erase(infoHash string) error {
 	return s.C.commandByHash("d.erase", infoHash)
 }
