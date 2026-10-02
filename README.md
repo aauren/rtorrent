@@ -83,6 +83,19 @@ on [pkg.go.dev](https://pkg.go.dev/github.com/aauren/rtorrent/rtorrent).
 `DownloadService.DownloadDetails()` fetches any set of `d.*` commands for one info-hash in a single
 `system.multicall`, which is a lot cheaper than one call per field once you're polling.
 
+`SystemService` covers rTorrent as a whole (its version, `directory.default`, and the global
+throttles), `DownloadService.LoadRaw()` adds a download from the bytes of a `.torrent` file, and
+`DownloadService.SetPriority()` and `FileService.SetPriority()` set download and file priorities.
+For anything the services don't wrap, `Client.Call()` sends any command as-is, something like the
+following:
+
+```go
+// Global commands still take an empty target as their first argument
+if _, err := c.Call("throttle.max_uploads.global.set", "", 50); err != nil {
+	log.Fatalf("setting the upload slots: %v", err)
+}
+```
+
 ## Development
 
 The make targets run inside Docker by default, so pass `BUILD_IN_DOCKER=false` if you'd rather use
