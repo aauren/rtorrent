@@ -153,7 +153,7 @@ func (c *XMLRPCClient) multicallByHash(infoHash string, methods ...string) ([]an
 
 	calls := make([]multicallEntry, 0, len(methods))
 	for _, m := range methods {
-		calls = append(calls, multicallEntry{MethodName: strings.TrimSuffix(m, "="), Params: []any{infoHash}})
+		calls = append(calls, multicallEntryFor(infoHash, m))
 	}
 
 	var raw []any
@@ -180,6 +180,19 @@ func (c *XMLRPCClient) multicallByHash(infoHash string, methods ...string) ([]an
 type multicallEntry struct {
 	MethodName string `xmlrpc:"methodName"`
 	Params     []any  `xmlrpc:"params"`
+}
+
+// multicallEntryFor turns a d.multicall2-style command into a system.multicall entry so the same "d.custom=label"
+// spelling works in both places. rTorrent splits the part after "=" on commas, so we do the same.
+func multicallEntryFor(infoHash, command string) multicallEntry {
+	name, rest, hasArgs := strings.Cut(command, "=")
+	params := []any{infoHash}
+	if hasArgs && rest != "" {
+		for a := range strings.SplitSeq(rest, ",") {
+			params = append(params, a)
+		}
+	}
+	return multicallEntry{MethodName: name, Params: params}
 }
 
 // multicallValue unwraps one system.multicall result, which is a one-element array on success or a fault struct

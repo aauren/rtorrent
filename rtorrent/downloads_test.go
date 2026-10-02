@@ -9,7 +9,10 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-const testName = "a name"
+const (
+	testName   = "a name"
+	testMethod = "d.name"
+)
 
 var (
 	testInfoHash  = strings.Repeat("A", 40)
@@ -146,9 +149,9 @@ func TestDownloadServiceDetails(t *testing.T) {
 	mockClient := NewMockClient(gomock.NewController(t))
 	ds := &DownloadService{C: mockClient}
 
-	mockClient.EXPECT().multicallByHash(testInfoHash, "d.name", "d.complete=").Return([]any{testName, int64(1)}, nil)
+	mockClient.EXPECT().multicallByHash(testInfoHash, testMethod, "d.complete=").Return([]any{testName, int64(1)}, nil)
 
-	got, err := ds.DownloadDetails(testInfoHash, []string{"d.name", "d.complete="})
+	got, err := ds.DownloadDetails(testInfoHash, []string{testMethod, "d.complete="})
 	require.NoError(t, err)
 	assert.Equal(t, []any{testName, int64(1)}, got)
 }

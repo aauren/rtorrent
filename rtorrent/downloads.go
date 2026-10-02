@@ -67,7 +67,8 @@ func (s *DownloadService) DownloadWithDetails(commands []string) ([][]any, error
 }
 
 // DownloadDetails retrieves the given commands for one download in a single round trip, returning one value per
-// command in order. Commands may be written with or without the trailing "=" that DownloadWithDetails expects.
+// command in order. Commands take the same d.multicall2 form DownloadWithDetails expects, so "d.name=" and
+// "d.custom=label" both work, as does a bare "d.name".
 func (s *DownloadService) DownloadDetails(infoHash string, commands []string) ([]any, error) {
 	return s.C.multicallByHash(infoHash, commands...)
 }

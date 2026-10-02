@@ -112,7 +112,7 @@ func TestMulticallByHash(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = c.Close() })
 
-			got, err := c.multicallByHash(testInfoHash, "d.name", "d.complete=")
+			got, err := c.multicallByHash(testInfoHash, testMethod, "d.complete=")
 			switch {
 			case tt.wantFault != "":
 				var fault xmlrpc.FaultError
@@ -129,10 +129,35 @@ func TestMulticallByHash(t *testing.T) {
 	}
 }
 
+func TestMulticallEntryFor(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		command string
+		want    multicallEntry
+	}{
+		{"bare", testMethod, multicallEntry{MethodName: testMethod, Params: []any{testInfoHash}}},
+		{"trailing equals", "d.name=", multicallEntry{MethodName: testMethod, Params: []any{testInfoHash}}},
+		{"one arg", "d.custom=label", multicallEntry{MethodName: "d.custom", Params: []any{testInfoHash, "label"}}},
+		{
+			"comma separated args", "d.custom.set=key,value",
+			multicallEntry{MethodName: "d.custom.set", Params: []any{testInfoHash, "key", "value"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, multicallEntryFor(testInfoHash, tt.command))
+		})
+	}
+}
+
 func TestMulticallByHashKeepsMethodNameFirst(t *testing.T) {
 	t.Parallel()
 
-	methods := slices.Repeat([]string{"d.name"}, 64)
+	methods := slices.Repeat([]string{testMethod}, 64)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -156,7 +181,7 @@ func TestMulticallByHashKeepsMethodNameFirst(t *testing.T) {
 func TestMulticallByHashRequiresInfoHash(t *testing.T) {
 	t.Parallel()
 
-	_, err := (&XMLRPCClient{}).multicallByHash("", "d.name")
+	_, err := (&XMLRPCClient{}).multicallByHash("", testMethod)
 	require.ErrorIs(t, err, ErrBadData)
 }
 
