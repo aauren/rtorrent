@@ -293,3 +293,36 @@ type xmlrpcArray struct {
 type xmlrpcArrayData struct {
 	String string `xml:"string"`
 }
+
+func TestCall(t *testing.T) {
+	t.Parallel()
+
+	const reply = `<?xml version="1.0"?><methodResponse><params><param><value><i8>0</i8></value></param></params>` +
+		`</methodResponse>`
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("reading request: %v", err)
+			return
+		}
+		for _, want := range []string{
+			"<methodName>load.raw</methodName>",
+			"<value><string></string></value>",
+			"<value><base64>ZDQ6aW5mb2RlZQ==</base64></value>",
+			"<value><int>1024</int></value>",
+		} {
+			assert.Contains(t, string(body), want)
+		}
+		_, _ = io.WriteString(w, reply)
+	}))
+	t.Cleanup(s.Close)
+
+	c, err := New(s.URL, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+
+	got, err := c.Call("load.raw", "", []byte("d4:infodee"), 1024)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), got)
+}

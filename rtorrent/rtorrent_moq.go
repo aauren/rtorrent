@@ -39,6 +39,50 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// Call mocks base method.
+func (m *MockClient) Call(method string, args ...any) (any, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{method}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Call", varargs...)
+	ret0, _ := ret[0].(any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Call indicates an expected call of Call.
+func (mr *MockClientMockRecorder) Call(method any, args ...any) *MockClientCallCall {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{method}, args...)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockClient)(nil).Call), varargs...)
+	return &MockClientCallCall{Call: call}
+}
+
+// MockClientCallCall wrap *gomock.Call
+type MockClientCallCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientCallCall) Return(arg0 any, arg1 error) *MockClientCallCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientCallCall) Do(f func(string, ...any) (any, error)) *MockClientCallCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientCallCall) DoAndReturn(f func(string, ...any) (any, error)) *MockClientCallCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Close mocks base method.
 func (m *MockClient) Close() error {
 	m.ctrl.T.Helper()

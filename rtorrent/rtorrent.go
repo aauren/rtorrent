@@ -2,6 +2,7 @@
 package rtorrent
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -17,6 +18,7 @@ type Client interface {
 	UploadTotal() (int, error)
 	DownloadRate() (int, error)
 	UploadRate() (int, error)
+	Call(method string, args ...any) (any, error)
 
 	getSliceSlice(method string, args ...string) ([][]any, error)
 	getSliceSliceByHash(method string, args ...string) ([][]any, error)
@@ -69,6 +71,22 @@ func (c *XMLRPCClient) DownloadRate() (int, error) {
 // UploadRate retrieves the current upload rate in bytes from rTorrent.
 func (c *XMLRPCClient) UploadRate() (int, error) {
 	return c.getInt("up.rate", "")
+}
+
+// Call runs any rTorrent command the services don't wrap and returns whatever it replies with. Arguments are sent
+// as given, so a global command still needs its "" target first, like Call("throttle.global_down.max_rate.set", "",
+// 1024), and a []byte is sent as base64.
+func (c *XMLRPCClient) Call(method string, args ...any) (any, error) {
+	send := make([]any, 0, len(args))
+	for _, a := range args {
+		if b, ok := a.([]byte); ok {
+			a = xmlrpc.Base64(base64.StdEncoding.EncodeToString(b))
+		}
+		send = append(send, a)
+	}
+
+	var v any
+	return v, c.call(method, send, &v)
 }
 
 // call runs the XML-RPC method and decodes into out, tagging failures with the method name because transport errors
