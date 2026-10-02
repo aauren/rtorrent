@@ -191,6 +191,10 @@ func multicallValue(r any) (any, error) {
 		}
 		return v[0], nil
 	case map[string]any:
+		// Only a struct carrying faultCode is a fault, anything else is a result shape we don't know how to unwrap
+		if _, ok := v["faultCode"]; !ok {
+			return nil, fmt.Errorf("%w: unexpected multicall result %T", ErrBadData, r)
+		}
 		fault := xmlrpc.FaultError{}
 		fault.Code, _ = intFromAny(v["faultCode"])
 		fault.String, _ = stringFromAny(v["faultString"])

@@ -67,6 +67,10 @@ func TestMulticallByHash(t *testing.T) {
 		shortReply = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
 <value><array><data><value><string>a name</string></value></data></array></value>
 </data></array></value></param></params></methodResponse>`
+		structReply = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
+<value><array><data><value><string>a name</string></value></data></array></value>
+<value><struct><member><name>foo</name><value><string>bar</string></value></member></struct></value>
+</data></array></value></param></params></methodResponse>`
 	)
 
 	tests := []struct {
@@ -79,6 +83,7 @@ func TestMulticallByHash(t *testing.T) {
 		{name: "values are unwrapped in order", reply: okReply, want: []any{testName, int64(1)}},
 		{name: "a fault on one method fails the call", reply: faultReply, wantFault: "Could not find info-hash."},
 		{name: "result count mismatch", reply: shortReply, wantErr: ErrBadData},
+		{name: "a struct without faultCode is not a fault", reply: structReply, wantErr: ErrBadData},
 	}
 
 	for _, tt := range tests {
