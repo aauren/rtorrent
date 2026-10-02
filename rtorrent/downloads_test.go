@@ -171,3 +171,58 @@ func TestDownloadServiceWithDetails(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, [][]any{{testName}}, got)
 }
+
+func TestDownloadServiceSetPriority(t *testing.T) {
+	t.Parallel()
+
+	mockClient := NewMockClient(gomock.NewController(t))
+	ds := &DownloadService{C: mockClient}
+
+	mockClient.EXPECT().Call("d.priority.set", testInfoHash, int(PriorityHigh)).Return(int64(0), nil)
+
+	require.NoError(t, ds.SetPriority(testInfoHash, PriorityHigh))
+	require.ErrorIs(t, ds.SetPriority("", PriorityHigh), ErrBadData)
+}
+
+func TestDownloadServiceUpdatePriorities(t *testing.T) {
+	t.Parallel()
+
+	ds := &DownloadService{C: testClient(t, "d.update_priorities", []string{testInfoHash}, 0)}
+	require.NoError(t, ds.UpdatePriorities(testInfoHash))
+}
+
+func TestDownloadServiceLoadRaw(t *testing.T) {
+	t.Parallel()
+
+	data := []byte("d4:infodee")
+	tests := []struct {
+		name     string
+		start    bool
+		commands []string
+		method   string
+		wantArgs []any
+	}{
+		{name: "not started", method: "load.raw", wantArgs: []any{"", data}},
+		{
+			name: "started with commands", start: true, commands: []string{"d.custom1.set=tv"}, method: "load.raw_start",
+			wantArgs: []any{"", data, "d.custom1.set=tv"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mockClient := NewMockClient(gomock.NewController(t))
+			mockClient.EXPECT().Call(tt.method, tt.wantArgs...).Return(int64(0), nil)
+
+			require.NoError(t, (&DownloadService{C: mockClient}).LoadRaw(data, tt.start, tt.commands...))
+		})
+	}
+}
+
+func TestDownloadServiceLoadRawRequiresData(t *testing.T) {
+	t.Parallel()
+
+	require.ErrorIs(t, (&DownloadService{C: &XMLRPCClient{}}).LoadRaw(nil, true), ErrBadData)
+}

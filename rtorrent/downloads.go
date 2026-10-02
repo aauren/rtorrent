@@ -1,6 +1,19 @@
 package rtorrent
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+)
+
+// Priority is a download's d.priority
+type Priority int
+
+const (
+	PriorityOff Priority = iota
+	PriorityLow
+	PriorityNormal
+	PriorityHigh
+)
 
 const (
 	// downloadList is used in methods which retrieve a list of downloads.
@@ -118,6 +131,35 @@ func (s *DownloadService) SetMessage(infoHash, msg string) error {
 // SetCustom1 sets a download's custom1 field, by its info-hash, which ruTorrent and most tools use as the label.
 func (s *DownloadService) SetCustom1(infoHash, value string) error {
 	return s.C.commandByHash("d.custom1.set", infoHash, value)
+}
+
+// SetPriority sets a download's priority, by its info-hash. PriorityOff keeps it from transferring at all.
+func (s *DownloadService) SetPriority(infoHash string, priority Priority) error {
+	if infoHash == "" {
+		return fmt.Errorf("%w: d.priority.set requires an info-hash", ErrBadData)
+	}
+	_, err := s.C.Call("d.priority.set", infoHash, int(priority))
+	return err
+}
+
+// UpdatePriorities applies file priorities set with FileService.SetPriority, by the download's info-hash.
+func (s *DownloadService) UpdatePriorities(infoHash string) error {
+	return s.C.commandByHash("d.update_priorities", infoHash)
+}
+
+// LoadRaw adds a download from the contents of a .torrent file, starting it when start is set. Each command runs
+// against the new download first, in the d.multicall2 form ("d.custom1.set=tv"), which splits on commas. rTorrent
+// caps an XML-RPC request at network.xmlrpc.size_limit, and base64 makes the file a third bigger on the wire.
+func (s *DownloadService) LoadRaw(data []byte, start bool, commands ...string) error {
+	if len(data) == 0 {
+		return fmt.Errorf("%w: load.raw requires the contents of a .torrent file", ErrBadData)
+	}
+	method := "load.raw"
+	if start {
+		method = "load.raw_start"
+	}
+	_, err := s.C.Call(method, argsToAny([]any{"", data}, commands)...)
+	return err
 }
 
 // BaseFilename retrieves the base filename shown in the rTorrent UI for a specific download, by its info-hash.
