@@ -9,9 +9,9 @@ Package `rtorrent` implements a client for rTorrent's XML-RPC interface. MIT Lic
 ## Current State
 
 This began as a fork of [mdlayher/rtorrent](https://github.com/mdlayher/rtorrent), which covers the
-global transfer counters and the download list. Since then I've added per-download detail lookups
-and a tracker service, so you can pull announce times, failure counters, and intervals back out for
-a given info-hash.
+global transfer counters and the download list. Since then I've added per-download detail lookups,
+the basic download commands (start, stop, close, erase, hash check, and moving the directory),
+and file, peer, and tracker services.
 
 It's still pretty limited next to rTorrent's full command reference, and I tend to add commands as
 I need them rather than aiming for coverage. The API isn't settled either, so you'll want to pin a
@@ -79,6 +79,9 @@ func main() {
 
 `AllTrackerFields()` returns every field a tracker can be asked for, and the full API is documented
 on [pkg.go.dev](https://pkg.go.dev/github.com/aauren/rtorrent/rtorrent).
+
+`DownloadService.DownloadDetails()` fetches any set of `d.*` commands for one info-hash in a single
+`system.multicall`, which is a lot cheaper than one call per field once you're polling.
 
 ## Development
 
