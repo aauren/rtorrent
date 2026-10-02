@@ -55,22 +55,22 @@ func (c *XMLRPCClient) Close() error {
 
 // DownloadTotal retrieves the total number of downloaded bytes since rTorrent startup.
 func (c *XMLRPCClient) DownloadTotal() (int, error) {
-	return c.getInt("down.total", "")
+	return c.getInt("throttle.global_down.total", "")
 }
 
 // UploadTotal retrieves the total number of uploaded bytes since rTorrent startup.
 func (c *XMLRPCClient) UploadTotal() (int, error) {
-	return c.getInt("up.total", "")
+	return c.getInt("throttle.global_up.total", "")
 }
 
 // DownloadRate retrieves the current download rate in bytes from rTorrent.
 func (c *XMLRPCClient) DownloadRate() (int, error) {
-	return c.getInt("down.rate", "")
+	return c.getInt("throttle.global_down.rate", "")
 }
 
 // UploadRate retrieves the current upload rate in bytes from rTorrent.
 func (c *XMLRPCClient) UploadRate() (int, error) {
-	return c.getInt("up.rate", "")
+	return c.getInt("throttle.global_up.rate", "")
 }
 
 // Call runs any rTorrent command the services don't wrap and returns whatever it replies with. Arguments are sent

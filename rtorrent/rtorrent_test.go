@@ -24,10 +24,10 @@ func TestClientTotalsAndRates(t *testing.T) {
 		method string
 		call   func(Client) (int, error)
 	}{
-		{"download total", "down.total", Client.DownloadTotal},
-		{"upload total", "up.total", Client.UploadTotal},
-		{"download rate", "down.rate", Client.DownloadRate},
-		{"upload rate", "up.rate", Client.UploadRate},
+		{"download total", "throttle.global_down.total", Client.DownloadTotal},
+		{"upload total", "throttle.global_up.total", Client.UploadTotal},
+		{"download rate", "throttle.global_down.rate", Client.DownloadRate},
+		{"upload rate", "throttle.global_up.rate", Client.UploadRate},
 	}
 
 	for _, tt := range tests {
