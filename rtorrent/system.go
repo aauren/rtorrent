@@ -1,5 +1,7 @@
 package rtorrent
 
+import "fmt"
+
 // A SystemService is a wrapper for Client methods which operate on rTorrent as a whole rather than on one download.
 type SystemService struct {
 	C Client
@@ -31,13 +33,23 @@ func (s *SystemService) GlobalUploadLimit() (int, error) {
 }
 
 // SetGlobalDownloadLimit caps every download at bytesPerSec combined, where 0 removes the cap.
+// rTorrent rounds down to whole KiB/s, so 1536 bytes/s becomes 1024 bytes/s. We reject nonzero
+// values below 1024 with ErrBadData because a positive sub-KiB/s limit would become unlimited.
 func (s *SystemService) SetGlobalDownloadLimit(bytesPerSec int) error {
+	if bytesPerSec != 0 && bytesPerSec < 1024 {
+		return fmt.Errorf("%w: global download limit must be 0 (unlimited) or at least 1024 bytes/s", ErrBadData)
+	}
 	_, err := s.C.Call("throttle.global_down.max_rate.set", "", bytesPerSec)
 	return err
 }
 
 // SetGlobalUploadLimit caps every upload at bytesPerSec combined, where 0 removes the cap.
+// rTorrent rounds down to whole KiB/s, so 1536 bytes/s becomes 1024 bytes/s. We reject nonzero
+// values below 1024 with ErrBadData because a positive sub-KiB/s limit would become unlimited.
 func (s *SystemService) SetGlobalUploadLimit(bytesPerSec int) error {
+	if bytesPerSec != 0 && bytesPerSec < 1024 {
+		return fmt.Errorf("%w: global upload limit must be 0 (unlimited) or at least 1024 bytes/s", ErrBadData)
+	}
 	_, err := s.C.Call("throttle.global_up.max_rate.set", "", bytesPerSec)
 	return err
 }

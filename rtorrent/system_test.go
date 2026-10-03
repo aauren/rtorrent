@@ -75,10 +75,38 @@ func TestSystemServiceSetLimits(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockClient := NewMockClient(gomock.NewController(t))
-			mockClient.EXPECT().Call(tt.method, "", testBytes).Return(int64(0), nil)
+			limits := []struct {
+				name        string
+				bytesPerSec int
+				wantErr     bool
+			}{
+				{name: "negative", bytesPerSec: -1, wantErr: true},
+				{name: "unlimited", bytesPerSec: 0},
+				{name: "one byte", bytesPerSec: 1, wantErr: true},
+				{name: "half KiB", bytesPerSec: 512, wantErr: true},
+				{name: "below minimum", bytesPerSec: 1023, wantErr: true},
+				{name: "minimum", bytesPerSec: 1024},
+				{name: "fractional KiB", bytesPerSec: 1536},
+				{name: "multiple KiB", bytesPerSec: 2048},
+			}
 
-			require.NoError(t, tt.call(&SystemService{C: mockClient}, testBytes))
+			for _, limit := range limits {
+				t.Run(limit.name, func(t *testing.T) {
+					t.Parallel()
+
+					mockClient := NewMockClient(gomock.NewController(t))
+					if !limit.wantErr {
+						mockClient.EXPECT().Call(tt.method, "", limit.bytesPerSec).Return(int64(0), nil)
+					}
+
+					err := tt.call(&SystemService{C: mockClient}, limit.bytesPerSec)
+					if limit.wantErr {
+						require.ErrorIs(t, err, ErrBadData)
+						return
+					}
+					require.NoError(t, err)
+				})
+			}
 		})
 	}
 }
